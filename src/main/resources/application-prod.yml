@@ -1,0 +1,19 @@
+spring:
+  # ===============================
+  # = DATASOURCE (for Production)
+  # ===============================
+  datasource:
+    url: jdbc:mysql://your-production-db-host:3306/nkraft_prod_db?useSSL=true&serverTimezone=Asia/Tokyo
+    username: your_prod_user
+    # 重要: 本番環境ではパスワードを直接記述せず、環境変数やSecrets Managerなどから取得してください。
+    # 以下は環境変数 DB_PASSWORD を参照する例です。
+    password: ${DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  # ===============================
+  # = JPA & Flyway
+  # ===============================
+  jpa:
+    hibernate:
+      # Flywayでスキーマを管理し、起動時にEntityとの整合性を検証します。
+      ddl-auto: validate

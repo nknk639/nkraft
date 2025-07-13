@@ -1,0 +1,20 @@
+version: "3.9"
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: nkraft-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: nkraft_db
+      MYSQL_USER: nkraft
+      MYSQL_PASSWORD: pass
+      MYSQL_ROOT_PASSWORD: root
+      TZ: Asia/Tokyo
+    ports:
+      - "3306:3306"
+    volumes:
+      - nkraft-mysql-data:/var/lib/mysql
+      # Flywayでテーブルを作成するため、initdbのボリュームマウントは通常不要です。
+      # - ./initdb:/docker-entrypoint-initdb.d
+volumes:
+  nkraft-mysql-data:

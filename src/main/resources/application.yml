@@ -1,0 +1,7 @@
+spring:
+  application:
+    name: nkraft
+  # プロファイルを指定しない場合のデフォルトをdevに設定します。
+  # 明示的に指定して実行することを推奨します。
+  profiles:
+    active: dev
