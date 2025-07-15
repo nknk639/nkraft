@@ -14,30 +14,26 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-            .authorizeHttpRequests(authorize -> authorize
-                // CSSやJSなどの静的リソースへのアクセスを許可
-                .requestMatchers("/css/**", "/js/**", "/webjars/**").permitAll()
-                // ログインページへのアクセスを許可
-                .requestMatchers("/login").permitAll()
-                // その他のリクエストはすべて認証が必要
-                .anyRequest().authenticated()
-            )
-            .formLogin(form -> form
-                // ログインページのURLを指定
-                .loginPage("/login")
-                // ログイン処理を行うURL (Spring Securityが自動で処理)
-                .loginProcessingUrl("/login")
-                // ログイン成功時のリダイレクト先
-                .defaultSuccessUrl("/budget/", true)
-                // ログインページは全員にアクセスを許可
-                .permitAll()
-            )
-            .logout(logout -> logout
-                // ログアウト成功時のリダイレクト先
-                .logoutSuccessUrl("/login?logout")
-                .permitAll()
-            );
+        http.authorizeHttpRequests(authorize -> authorize
+                        // CSSやJSなどの静的リソースへのアクセスを許可
+                        .requestMatchers("/css/**", "/js/**", "/webjars/**").permitAll()
+                        // ログインページへのアクセスを許可
+                        .requestMatchers("/login").permitAll()
+                        // その他のリクエストはすべて認証が必要
+                        .anyRequest().authenticated())
+                .formLogin(form -> form
+                        // ログインページのURLを指定
+                        .loginPage("/login")
+                        // ログイン処理を行うURL (Spring Securityが自動で処理)
+                        .loginProcessingUrl("/login")
+                        // ログイン成功時のリダイレクト先
+                        .defaultSuccessUrl("/dashboard", true) // "/dashboard" に変更
+                        // ログインページは全員にアクセスを許可
+                        .permitAll())
+                .logout(logout -> logout
+                        // ログアウト成功時のリダイレクト先
+                        .logoutSuccessUrl("/login?logout")
+                        .permitAll());
         return http.build();
     }
 
@@ -45,4 +41,5 @@ public class SecurityConfig {
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
+
 }

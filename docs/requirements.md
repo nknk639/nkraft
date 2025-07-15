@@ -22,7 +22,7 @@
 ### 2.0. 認証機能 (Authentication)
 | 機能ID | 機能名 | 詳細仕様 |
 | :--- | :--- | :--- |
-| **F-A01** | **ユーザー認証** | **目的:** ユーザーを識別し、各自のデータへのアクセスをセキュアに管理する。<br>**主要プロセス:**<br>1. ユーザーはログインページで認証情報（ユーザー名、パスワード）を入力する。<br>2. システムは認証情報を検証し、成功した場合はセッションを開始してアプリケーションへのアクセスを許可する。<br>3. ログアウト機能により、ユーザーはセッションを安全に終了できる。<br>**関連データ:** `users`(READ) |
+| **F-A01** | **ユーザー認証** | **目的:** ユーザーを識別し、各自のデータへのアクセスをセキュアに管理する。<br>**主要プロセス:**<br>1. ユーザーはログインページで認証情報（ユーザー名、パスワード）を入力する。<br>2. システムは認証情報を検証し、成功した場合はセッションを開始してアプリケーションへのアクセスを許可する。<br>3. ログアウト機能により、ユーザーはセッションを安全に終了できる。<br>**関連データ:** `nkraft_users`(READ) |
 
 ### 2.1. 中核機能 (Core Features)
 キャッシュフローの可視化とシミュレーションに関する機能群。**全ての機能はログイン中のユーザーに紐づくデータのみを対象とする。**
@@ -37,7 +37,7 @@
 
 | 機能ID | 機能名 | 詳細仕様 |
 | :--- | :--- | :--- |
-| **F-B03** | **取引の登録・管理** | **目的:** キャッシュフロー予測と実績分析の元となる、全ての入出金データを管理する。<br>**主要プロセス:**<br>1. ユーザーは口座、取引種別、カテゴリを選択し、日付、予定額、メモといった情報を入力する。<br>2. データは`transactions`テーブルに`transaction_status = '予定'`で保存される。<br>3. ユーザーはモーダルウィンドウを通じて、既存の取引を編集、または削除できる。<br>4. ユーザーが取引を`transaction_status = '完了'`にする際、以下の処理を行う。<br>    a. `actual_amount`（実績額）が未入力の場合は、`planned_amount`（予定額）の値をコピーして保存する。<br>    b. `accounts`テーブルの`balance`（口座残高）を、この取引の`actual_amount`に基づいて更新する。（入金なら加算、出金/口座振替なら減算）<br>**関連データ:** `accounts`(UPDATE), `transactions` (CREATE, READ, UPDATE, DELETE), `transaction_types`(READ), `categories`(READ) |
+| **F-B03** | **取引の登録・管理** | **目的:** キャッシュフロー予測と実績分析の元となる、全ての入出金データを管理する。<br>**主要プロセス:**<br>1. ユーザーは口座、取引種別、カテゴリを選択し、日付、予定額、メモといった情報を入力する。<br>2. データは`transactions`テーブルに`transaction_status = '予定'`で保存される。<br>3. ユーザーはモーダルウィンドウを通じて、既存の取引を編集、または削除できる。<br>4. ユーザーが取引を`transaction_status = '完了'`にする際、以下の処理を行う。<br>    a. `actual_amount`（実績額）が未入力の場合は、`planned_amount`（予定額）の値をコピーして保存する。<br>    b. `accounts`テーブルの`balance`（口座残高）を、この取引の`actual_amount`に基づいて更新する。（入金なら加算、出金/口座振替なら減算）<br>**関連データ:** `accounts`(UPDATE), `transactions` (CREATE, READ, UPDATE, DELETE), `budget_transaction_types`(READ), `categories`(READ) |
 | **F-B04** | **取引一覧と検索** | **目的:** 過去の実績を含む全ての取引履歴の確認や、特定の取引の検索を容易にする。<br>**主要プロセス:**<br>1. 全ての取引を日付の降順でリスト表示する。<br>2. ユーザーは検索フィルター機能を用いて、キーワード、期間、カテゴリ、口座等の条件でリストを絞り込むことができる。<br>3. 各取引アイテムは、F-B03の編集モーダルを開くトリガーとなる。<br>**関連データ:** `transactions` (READ) |
 
 ### 2.3. マスター管理機能 (Master Data Management Features)
@@ -71,8 +71,8 @@
 ### 3.2. 予算管理モジュールの画面一覧
 | 画面名 | URL | 概要 | 主要機能 | 関連DB |
 | :--- | :--- | :--- | :--- | :--- |
-| **ログインページ** | `/login` | アプリケーションへのアクセス認証を行う。 | `F-A01` | `users` |
-| **ダッシュボード** | `/budget/` | **未来のキャッシュフロー予測に特化したトップページ。**<br>**【表示コンポーネント】**<br>1. **取引入力フォーム:** 新規の取引予定を登録する。<br>2. **繰り返し予定ボタン:** アコーディオン形式で表示。ボタンクリックで次の予定を生成。<br>3. **残高推移予測グラフ:** 全ての予定取引を基にした未来の残高推移を可視化。<br>4. **取引予定リスト:** グラフの元データとなる全予定取引をリスト表示。スクロール可能。各行に実績額入力欄、完了/編集ボタンを配置。表示項目は `transaction_date`, `planned_amount`, `actual_amount`, `transaction_type_name`, `category_name`。 <br>5. **口座残高カード:** 各口座の現在残高をカード形式で表示。クリックで取引一覧へ遷移。<br>6. **目標・借入一覧:** 各マスターデータのサマリーをリスト表示。 | `F-B01`, `F-B02`, `F-B03`, `F-B05`, `F-B10` | `users`, `accounts`, `transactions`, `borrows`, `goals` |
+| **ログインページ** | `/login` | アプリケーションへのアクセス認証を行う。 | `F-A01` | `nkraft_users` |
+| **ダッシュボード** | `/budget/` | **未来のキャッシュフロー予測に特化したトップページ。**<br>**【表示コンポーネント】**<br>1. **取引入力フォーム:** 新規の取引予定を登録する。<br>2. **繰り返し予定ボタン:** アコーディオン形式で表示。ボタンクリックで次の予定を生成。<br>3. **残高推移予測グラフ:** 全ての予定取引を基にした未来の残高推移を可視化。<br>4. **取引予定リスト:** グラフの元データとなる全予定取引をリスト表示。スクロール可能。各行に実績額入力欄、完了/編集ボタンを配置。表示項目は `transaction_date`, `planned_amount`, `actual_amount`, `budget_transaction_type_name`, `category_name`。 <br>5. **口座残高カード:** 各口座の現在残高をカード形式で表示。クリックで取引一覧へ遷移。<br>6. **目標・借入一覧:** 各マスターデータのサマリーをリスト表示。 | `F-B01`, `F-B02`, `F-B03`, `F-B05`, `F-B10` | `nkraft_users`, `accounts`, `transactions`, `borrows`, `goals` |
 | **取引一覧** | `/budget/transactions` | 全ての取引（過去の実績含む）を詳細に確認・管理する。**口座切り替えフィルターを持つ。** | `F-B04`, `F-B03` | `transactions` |
 | **予実レポート** | `/budget/report` | **過去の実績分析に特化。**月次の予実をカテゴリ別棒グラフで比較する。 | `F-B11` | `transactions` |
 | **借入一覧** | `/budget/borrows` | 登録されている全ての借入を管理する。 | `F-B06` (一覧, 新規) | `borrows` |
@@ -87,29 +87,29 @@
 ## 4. データモデル（テーブル設計案）
 *予算管理モジュールが使用するテーブル。主キーは `テーブル名_id` 形式とする。*
 
-- **`users` (ユーザーマスタ)**
-  - `user_id` (PK)
+- **`nkraft_users` (ユーザーマスタ)**
+  - `nkraft_user_id` (PK)
   - `username`
   - `password`
 - **`accounts` (口座マスタ)**
   - `account_id` (PK)
-  - `user_id` (FK: `users`)
+  - `nkraft_user_id` (FK: `nkraft_users`)
   - `account_name`
   - `balance` (現在の残高)
   - `is_main` (TINYINT(1))
   - `is_savings` (TINYINT(1))
-- **`transaction_types` (取引種別マスタ)**
-  - `transaction_type_id` (PK)
-  - `transaction_type_name`
+- **`budget_transaction_types` (取引種別マスタ)**
+  - `budget_transaction_type_id` (PK)
+  - `budget_transaction_type_name`
 - **`categories` (カテゴリマスタ)**
   - `category_id` (PK)
-  - `user_id` (FK: `users`)
+  - `nkraft_user_id` (FK: `nkraft_users`)
   - `category_name`
 - **`transactions` (取引)**
   - `transaction_id` (PK)
-  - `user_id` (FK: `users`)
+  - `nkraft_user_id` (FK: `nkraft_users`)
   - `account_id` (FK: `accounts`)
-  - `transaction_type_id` (FK: `transaction_types`)
+  - `budget_transaction_type_id` (FK: `budget_transaction_types`)
   - `category_id` (FK: `categories`, NULL許容)
   - `transaction_date`
   - `planned_amount` (予定額)
@@ -121,10 +121,10 @@
   - `goal_id` (FK: `goals`)
 - **`recurring_transactions` (繰り返し予定)**
   - `recurring_transaction_id` (PK)
-  - `user_id` (FK: `users`)
+  - `nkraft_user_id` (FK: `nkraft_users`)
   - `recurring_transaction_name`
   - `account_id` (FK: `accounts`)
-  - `transaction_type_id` (FK: `transaction_types`)
+  - `budget_transaction_type_id` (FK: `budget_transaction_types`)
   - `category_id` (FK: `categories`, NULL許容)
   - `amount`
   - `memo`
@@ -133,7 +133,7 @@
   - `day_of_week` (INTEGER, 0-6 for Sun-Sat, `rule_type`が'毎週'の場合に利用)
 - **`borrows` (借入)**
   - `borrow_id` (PK)
-  - `user_id` (FK: `users`)
+  - `nkraft_user_id` (FK: `nkraft_users`)
   - `borrow_name`
   - `total_amount`, `repaid_amount`
 - **`repayments` (返済履歴)**
@@ -142,7 +142,7 @@
   - `borrow_id` (FK: `borrows`)
 - **`goals` (目標)**
   - `goal_id` (PK)
-  - `user_id` (FK: `users`)
+  - `nkraft_user_id` (FK: `nkraft_users`)
   - `goal_name`
   - `target_amount`, `saved_amount`
 - **`goal_achievements` (目標達成履歴)**
@@ -151,7 +151,7 @@
   - `goal_id` (FK: `goals`)
 
 ### 4.1. 初期データ (Initial Data)
-- **`users` テーブル**
+- **`nkraft_users` テーブル**
   - アプリケーションの初期状態で、以下のユーザーが登録されているものとする。
     - username: `test`, password: `test`
     - username: `natsuki`, password: `mm5c53um`
@@ -194,7 +194,6 @@ src
 │   │       │   ├── service
 │   │       │   ├── repository
 │   │       │   └── entity
-│   │       ├── lead        // (既存のリード管理モジュール)
 │   │       ├── user        // ★ユーザー・認証関連
 │   │       ├── config      // (共通設定, SecurityConfigなど)
 │   │       └── NkraftApplication.java

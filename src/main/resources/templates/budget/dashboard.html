@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NKraft - 予算管理ダッシュボード</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bs-primary-rgb: 0, 31, 63; /* #001f3f */
+            --bs-secondary-rgb: 135, 206, 235; /* #87CEEB */
+            --sidebar-bg: #001f3f;
+            --sidebar-link-color: #adb5bd;
+            --sidebar-link-hover-color: #f8f9fa;
+            --sidebar-link-active-color: #ffffff;
+            --sidebar-accent-color: #87CEEB;
+        }
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+        }
+        .sidebar {
+            width: 280px;
+            background-color: var(--sidebar-bg);
+            color: var(--sidebar-link-active-color);
+        }
+        .sidebar .nav-link {
+            color: var(--sidebar-link-color);
+            border-left: 3px solid transparent;
+            border-radius: 0;
+        }
+        .sidebar .nav-link:hover {
+            color: var(--sidebar-link-hover-color);
+            background-color: rgba(var(--bs-secondary-rgb), 0.1);
+            border-left-color: var(--sidebar-accent-color);
+        }
+        .sidebar .nav-link.active {
+            color: var(--sidebar-link-active-color);
+            font-weight: 700;
+            background-color: rgba(var(--bs-secondary-rgb), 0.2);
+            border-left-color: var(--sidebar-accent-color);
+        }
+        .sidebar .accordion-button {
+            background-color: transparent;
+            color: var(--sidebar-link-active-color);
+            font-weight: 500;
+        }
+        .sidebar .accordion-button:not(.collapsed) {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        .sidebar .accordion-button:focus {
+            box-shadow: none;
+        }
+        .sidebar .accordion-button::after {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23ffffff'%3e%3cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3e%3c/svg%3e");
+        }
+        .main-content {
+            background-color: #f8f9fa;
+        }
+    </style>
+</head>
+<body>
+
+<div class="d-flex flex-column vh-100">
+    <!-- Header -->
+    <header class="navbar navbar-expand-lg bg-white border-bottom shadow-sm flex-shrink-0">
+        <div class="container-fluid">
+            <a class="navbar-brand d-flex align-items-center" href="#">
+                <div class="d-inline-block align-text-top me-2" style="width: 32px; height: 32px; background-color: var(--sidebar-bg); border-radius: 0.5rem; padding: 4px;">
+                    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path d="M30 25 C 40 18, 60 18, 70 25 S 85 32, 70 32 S 40 32, 30 25 Z" fill="#87CEEB"/><path d="M30 30 L 25 90 H 75 L 70 30" stroke="white" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+                </div>
+                <span class="fw-bold fs-5" style="color: var(--sidebar-bg);">NKraft</span>
+            </a>
+            <div class="d-flex align-items-center">
+                <span class="text-muted me-3" sec:authentication="name">階堂 夏樹</span>
+                <div style="width: 40px; height: 40px; background-color: #e9ecef; border-radius: 50%;"></div>
+            </div>
+        </div>
+    </header>
+
+    <div class="d-flex flex-grow-1 overflow-hidden">
+        <!-- Left Menu -->
+        <aside class="sidebar p-3 flex-shrink-0">
+            <div class="accordion accordion-flush" id="sidebarAccordion">
+
+                <!-- 予算管理 -->
+                <div class="accordion-item bg-transparent border-0">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseBudget" aria-expanded="true" aria-controls="collapseBudget">
+                            予算管理
+                        </button>
+                    </h2>
+                    <div id="collapseBudget" class="accordion-collapse collapse show" data-bs-parent="#sidebarAccordion">
+                        <div class="accordion-body p-0 pt-2">
+                            <ul class="nav flex-column">
+                                <li><a th:href="@{/budget/}" class="nav-link active">ダッシュボード</a></li>
+                                <li><a th:href="@{/budget/transactions}" class="nav-link">取引一覧</a></li>
+                                <li><a th:href="@{/budget/report}" class="nav-link">予実レポート</a></li>
+                                <li><a th:href="@{/budget/recurring}" class="nav-link">繰り返し予定</a></li>
+                                <li><a th:href="@{/budget/borrows}" class="nav-link">借入管理</a></li>
+                                <li><a th:href="@{/budget/goals}" class="nav-link">目標管理</a></li>
+                                <li><a th:href="@{/budget/management}" class="nav-link">マスター管理</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 他の管理機能 (リード、商談など) はここに追記 -->
+
+            </div>
+        </aside>
+        
+        <!-- Main Content -->
+        <main class="main-content flex-grow-1 p-4 overflow-auto">
+            <div class="mb-4">
+                <h1 class="h2 fw-bold text-dark">予算管理ダッシュボード</h1>
+                <p class="text-muted">未来のキャッシュフローを予測し、資金繰りを管理します。</p>
+            </div>
+
+            <!-- 口座残高カード -->
+            <div class="row g-3 mb-4">
+                <!--/* TODO: Controllerから渡された口座リストをループ表示 */-->
+                <div class="col-md-4">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <h6 class="card-subtitle mb-2 text-muted">メイン口座</h6>
+                            <p class="card-text fs-4 fw-bold text-primary">¥1,234,567</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <h6 class="card-subtitle mb-2 text-muted">貯金用口座</h6>
+                            <p class="card-text fs-4 fw-bold text-primary">¥500,000</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 左側コンテンツエリア -->
+            <div class="row g-4">
+                <div class="col-lg-5 d-flex flex-column">
+
+                    <!-- 取引クイック登録 -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header fw-bold">取引クイック登録</div>
+                        <div class="card-body">
+                            <!--/* TODO: フォーム実装 (F-B03) */-->
+                            <p>ここに取引入力フォームが表示されます。</p>
+                            <a href="#" class="btn" style="background-color: var(--sidebar-accent-color); color: var(--sidebar-bg);">登録</a>
+                        </div>
+                    </div>
+
+                    <!-- 繰り返し予定 -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header fw-bold">繰り返し予定</div>
+                        <div class="card-body">
+                             <!--/* TODO: アコーディオンで繰り返し予定リストを実装 (F-B05) */-->
+                            <p>ここに繰り返し予定のアコーディオンが表示されます。</p>
+                        </div>
+                    </div>
+
+                    <!-- 取引予定リスト -->
+                    <div class="card shadow-sm flex-grow-1">
+                        <div class="card-header fw-bold">取引予定リスト</div>
+                        <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                           <!--/* TODO: Controllerから渡された取引予定リストをループ表示 (F-B02, F-B03) */-->
+                           <table class="table table-hover">
+                               <thead>
+                               <tr>
+                                   <th>日付</th>
+                                   <th>内容</th>
+                                   <th class="text-end">予定額</th>
+                                   <th>状態</th>
+                               </tr>
+                               </thead>
+                               <tbody>
+                               <tr>
+                                   <td>2025-08-01</td>
+                                   <td>A社 売上入金</td>
+                                   <td class="text-end text-success">+ ¥300,000</td>
+                                   <td><span class="badge bg-secondary">予定</span></td>
+                               </tr>
+                               <tr>
+                                   <td>2025-08-10</td>
+                                   <td>オフィス賃料</td>
+                                   <td class="text-end text-danger">- ¥150,000</td>
+                                   <td><span class="badge bg-secondary">予定</span></td>
+                               </tr>
+                               </tbody>
+                           </table>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- 右側コンテンツエリア -->
+                <div class="col-lg-7 d-flex flex-column">
+
+                    <!-- 残高推移予測グラフ -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header fw-bold">残高推移予測</div>
+                        <div class="card-body">
+                            <!--/* TODO: Chart.jsでグラフを描画 (F-B01) */-->
+                            <canvas id="balanceChart" height="200"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- 目標・借入一覧 -->
+                    <div class="card shadow-sm flex-grow-1">
+                        <div class="card-header fw-bold">目標・借入</div>
+                        <div class="card-body">
+                            <!--/* TODO: 目標と借入リストを表示 (F-B06, F-B07) */-->
+                             <p>ここに目標・借入の一覧が表示されます。</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+<!-- Custom JS for Chart -->
+<script>
+    // TODO: Controllerからデータを受け取り、グラフを初期化する
+    const ctx = document.getElementById('balanceChart');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: ['7月', '8月', '9月', '10月', '11月', '12月'],
+            datasets: [{
+                label: '残高予測',
+                data: [1234567, 1384567, 1234567, 1734567, 1584567, 1434567 ],
+                borderColor: 'rgb(0, 31, 63)',
+                tension: 0.1
+            }]
+        }
+    });
+</script>
+</body>
+</html>

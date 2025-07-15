@@ -3,7 +3,7 @@
 -- Table `accounts` (口座マスタ)
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `accounts` (
-  `account_id` INT NOT NULL AUTO_INCREMENT,
+  `account_id` BIGINT NOT NULL AUTO_INCREMENT,
   `account_name` VARCHAR(255) NOT NULL,
   `balance` DECIMAL(19, 2) NOT NULL,
   `is_main` TINYINT(1) NOT NULL DEFAULT 0,
@@ -16,7 +16,7 @@ ENGINE = InnoDB;
 -- Table `transaction_types` (取引種別マスタ)
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `transaction_types` (
-  `transaction_type_id` INT NOT NULL AUTO_INCREMENT,
+  `transaction_type_id` BIGINT NOT NULL AUTO_INCREMENT,
   `transaction_type_name` VARCHAR(255) NOT NULL,
   PRIMARY KEY (`transaction_type_id`))
 ENGINE = InnoDB;
@@ -26,7 +26,7 @@ ENGINE = InnoDB;
 -- Table `categories` (カテゴリマスタ)
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `categories` (
-  `category_id` INT NOT NULL AUTO_INCREMENT,
+  `category_id` BIGINT NOT NULL AUTO_INCREMENT,
   `category_name` VARCHAR(255) NOT NULL,
   PRIMARY KEY (`category_id`))
 ENGINE = InnoDB;
@@ -36,11 +36,11 @@ ENGINE = InnoDB;
 -- Table `recurring_transactions` (繰り返し予定)
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `recurring_transactions` (
-  `recurring_transaction_id` INT NOT NULL AUTO_INCREMENT,
+  `recurring_transaction_id` BIGINT NOT NULL AUTO_INCREMENT,
   `recurring_transaction_name` VARCHAR(255) NOT NULL,
-  `account_id` INT NOT NULL,
-  `transaction_type_id` INT NOT NULL,
-  `category_id` INT NULL,
+  `account_id` BIGINT NOT NULL,
+  `transaction_type_id` BIGINT NOT NULL,
+  `category_id` BIGINT NULL,
   `amount` DECIMAL(19, 2) NOT NULL,
   `memo` TEXT NULL,
   `rule_type` ENUM('毎月', '毎週') NOT NULL,
@@ -72,7 +72,7 @@ ENGINE = InnoDB;
 -- Table `borrows` (借入)
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `borrows` (
-  `borrow_id` INT NOT NULL AUTO_INCREMENT,
+  `borrow_id` BIGINT NOT NULL AUTO_INCREMENT,
   `borrow_name` VARCHAR(255) NOT NULL,
   `total_amount` DECIMAL(19, 2) NOT NULL,
   `repaid_amount` DECIMAL(19, 2) NULL DEFAULT 0.00,
@@ -84,7 +84,7 @@ ENGINE = InnoDB;
 -- Table `goals` (目標)
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `goals` (
-  `goal_id` INT NOT NULL AUTO_INCREMENT,
+  `goal_id` BIGINT NOT NULL AUTO_INCREMENT,
   `goal_name` VARCHAR(255) NOT NULL,
   `target_amount` DECIMAL(19, 2) NOT NULL,
   `saved_amount` DECIMAL(19, 2) NULL DEFAULT 0.00,
@@ -96,18 +96,18 @@ ENGINE = InnoDB;
 -- Table `transactions` (取引)
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `transactions` (
-  `transaction_id` INT NOT NULL AUTO_INCREMENT,
-  `account_id` INT NOT NULL,
-  `transaction_type_id` INT NOT NULL,
-  `category_id` INT NULL,
+  `transaction_id` BIGINT NOT NULL AUTO_INCREMENT,
+  `account_id` BIGINT NOT NULL,
+  `transaction_type_id` BIGINT NOT NULL,
+  `category_id` BIGINT NULL,
   `transaction_date` DATE NOT NULL,
   `planned_amount` DECIMAL(19, 2) NOT NULL,
   `actual_amount` DECIMAL(19, 2) NULL,
   `transaction_status` ENUM('予定', '完了') NOT NULL DEFAULT '予定',
   `memo` TEXT NULL,
-  `recurring_id` INT NULL,
-  `borrow_id` INT NULL,
-  `goal_id` INT NULL,
+  `recurring_id` BIGINT NULL,
+  `borrow_id` BIGINT NULL,
+  `goal_id` BIGINT NULL,
   PRIMARY KEY (`transaction_id`),
   INDEX `fk_transactions_accounts_idx` (`account_id` ASC) VISIBLE,
   INDEX `fk_transactions_transaction_types_idx` (`transaction_type_id` ASC) VISIBLE,
@@ -152,9 +152,9 @@ ENGINE = InnoDB;
 -- Table `repayments` (返済履歴)
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `repayments` (
-  `repayment_id` INT NOT NULL AUTO_INCREMENT,
-  `transaction_id` INT NOT NULL,
-  `borrow_id` INT NOT NULL,
+  `repayment_id` BIGINT NOT NULL AUTO_INCREMENT,
+  `transaction_id` BIGINT NOT NULL,
+  `borrow_id` BIGINT NOT NULL,
   PRIMARY KEY (`repayment_id`),
   INDEX `fk_repayments_transactions_idx` (`transaction_id` ASC) VISIBLE,
   INDEX `fk_repayments_borrows_idx` (`borrow_id` ASC) VISIBLE,
@@ -175,9 +175,9 @@ ENGINE = InnoDB;
 -- Table `goal_achievements` (目標達成履歴)
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `goal_achievements` (
-  `goal_achievement_id` INT NOT NULL AUTO_INCREMENT,
-  `transaction_id` INT NOT NULL,
-  `goal_id` INT NOT NULL,
+  `goal_achievement_id` BIGINT NOT NULL AUTO_INCREMENT,
+  `transaction_id` BIGINT NOT NULL,
+  `goal_id` BIGINT NOT NULL,
   PRIMARY KEY (`goal_achievement_id`),
   INDEX `fk_goal_achievements_transactions_idx` (`transaction_id` ASC) VISIBLE,
   INDEX `fk_goal_achievements_goals_idx` (`goal_id` ASC) VISIBLE,
