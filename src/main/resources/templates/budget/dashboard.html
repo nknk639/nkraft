@@ -121,38 +121,81 @@
 
             <!-- 口座残高カード -->
             <div class="row g-3 mb-4">
-                <!--/* TODO: Controllerから渡された口座リストをループ表示 */-->
-                <div class="col-md-4">
-                    <div class="card shadow-sm">
-                        <div class="card-body">
-                            <h6 class="card-subtitle mb-2 text-muted">メイン口座</h6>
-                            <p class="card-text fs-4 fw-bold text-primary">¥1,234,567</p>
+                <!-- TODO: Controllerから渡された口座リストをループ表示 -->
+                <div th:each="account : ${accounts}" class="col-md-4">
+                    <a th:href="@{/budget/transactions(accountId=${account.accountId})}" class="text-decoration-none">
+                        <div class="card shadow-sm h-100">
+                            <div class="card-body">
+                                <h6 class="card-subtitle mb-2 text-muted" th:text="${account.accountName}">口座名</h6>
+                                <p class="card-text fs-4 fw-bold text-primary" th:text="'¥' + ${#numbers.formatDecimal(account.balance, 0, 'DEFAULT', 0, 'DEFAULT')}">1,234,567</p>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                <!-- 口座がない場合の表示 -->
+                <div th:if="${accounts.isEmpty()}" class="col-12">
+                    <div class="alert alert-info" role="alert">
+                        口座が登録されていません。<a th:href="@{/budget/management}" class="alert-link">マスター管理</a>から登録してください。
                         </div>
                     </div>
                 </div>
-                <div class="col-md-4">
-                    <div class="card shadow-sm">
-                        <div class="card-body">
-                            <h6 class="card-subtitle mb-2 text-muted">貯金用口座</h6>
-                            <p class="card-text fs-4 fw-bold text-primary">¥500,000</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
-            <!-- 左側コンテンツエリア -->
+            <!-- メインコンテンツエリア -->
             <div class="row g-4">
-                <div class="col-lg-5 d-flex flex-column">
 
                     <!-- 取引クイック登録 -->
                     <div class="card shadow-sm mb-4">
                         <div class="card-header fw-bold">取引クイック登録</div>
                         <div class="card-body">
                             <!--/* TODO: フォーム実装 (F-B03) */-->
-                            <p>ここに取引入力フォームが表示されます。</p>
-                            <a href="#" class="btn" style="background-color: var(--sidebar-accent-color); color: var(--sidebar-bg);">登録</a>
+                            <form id="quickAddTransactionForm">
+                                <div class="row g-3 align-items-center">
+                                    <div class="col-auto">
+                                        <label for="transactionDate" class="col-form-label">取引日</label>
+                                    </div>
+                                    <div class="col-auto">
+                                        <input type="date" class="form-control form-control-sm" id="transactionDate" style="width: 120px;" required>
+                                    </div>
+                                    <div class="col-auto">
+                                        <label for="amount" class="col-form-label">金額</label>
+                                    </div>
+                                    <div class="col-auto">
+                                        <input type="number" class="form-control form-control-sm" id="amount" style="width: 100px;" required>
+                                    </div>
+                                    <div class="col-auto">
+                                        <label for="transactionType" class="col-form-label">取引種別</label>
+                                    </div>
+                                    <div class="col-auto">
+                                        <select class="form-select form-select-sm" id="transactionType" style="width: 120px;" required>
+                                            <option value="">選択</option>
+                                            <option value="1">入金</option>
+                                            <option value="2">出金</option>
+                                            <option value="3">振替</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-auto">
+                                        <label for="category" class="col-form-label">カテゴリ</label>
+                                    </div>
+                                    <div class="col-auto">
+                                        <select class="form-select form-select-sm" id="category" style="width: 120px;">
+                                            <option value="">未分類</option>
+                                            <option value="1">食費</option>
+                                            <option value="2">家賃</option>
+                                            <option value="3">給料</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="mt-2 d-flex align-items-center">
+                                    <div class="flex-grow-1">
+                                        <label for="memo" class="visually-hidden">メモ</label>
+                                        <input type="text" class="form-control form-control-sm" id="memo" placeholder="メモ (1行)">
+                                    </div>
+                                    <button type="submit" class="btn btn-sm ms-2" style="background-color: var(--sidebar-accent-color); color: var(--sidebar-bg);">登録</button>
+                                </div>
+                            </form>
                         </div>
                     </div>
+
 
                     <!-- 繰り返し予定 -->
                     <div class="card shadow-sm mb-4">
@@ -162,41 +205,58 @@
                             <p>ここに繰り返し予定のアコーディオンが表示されます。</p>
                         </div>
                     </div>
-
                     <!-- 取引予定リスト -->
-                    <div class="card shadow-sm flex-grow-1">
-                        <div class="card-header fw-bold">取引予定リスト</div>
-                        <div class="card-body" style="max-height: 400px; overflow-y: auto;">
-                           <!--/* TODO: Controllerから渡された取引予定リストをループ表示 (F-B02, F-B03) */-->
-                           <table class="table table-hover">
-                               <thead>
-                               <tr>
-                                   <th>日付</th>
-                                   <th>内容</th>
-                                   <th class="text-end">予定額</th>
-                                   <th>状態</th>
-                               </tr>
-                               </thead>
-                               <tbody>
-                               <tr>
-                                   <td>2025-08-01</td>
-                                   <td>A社 売上入金</td>
-                                   <td class="text-end text-success">+ ¥300,000</td>
-                                   <td><span class="badge bg-secondary">予定</span></td>
-                               </tr>
-                               <tr>
-                                   <td>2025-08-10</td>
-                                   <td>オフィス賃料</td>
-                                   <td class="text-end text-danger">- ¥150,000</td>
-                                   <td><span class="badge bg-secondary">予定</span></td>
-                               </tr>
-                               </tbody>
-                           </table>
+                    <div th:if="${not transactions.isEmpty()}" class="card shadow-sm flex-grow-1">
+                        <div class="card-header fw-bold d-flex justify-content-between align-items-center">
+                            取引予定リスト
+                            <!-- TODO: 取引シミュレーション機能 (F-B02) -->
+                            <!--<button type="button" class="btn btn-sm btn-outline-secondary">シミュレーション</button>-->
+                        </div>
+                        <div class="card-body p-0">
+                            <div style="max-height: 400px; overflow-y: auto;">
+                                <table class="table table-hover mb-0">
+                                    <thead>
+                                    <tr>
+                                        <th scope="col" style="width: 20%;">日付</th>
+                                        <th scope="col" style="width: 40%;">内容</th>
+                                        <th scope="col" class="text-end" style="width: 25%;">予定額</th>
+                                        <th scope="col" class="text-center" style="width: 15%;">アクション</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    <!-- TODO: Controllerから渡された取引予定リストをループ表示 (F-B02, F-B03) -->
+                                    <tr th:each="transaction : ${transactions}">
+                                        <td th:text="${#dates.format(transaction.transactionDate, 'yyyy-MM-dd')}">2025-08-01</td>
+                                        <td>
+                                            <span th:text="${transaction.memo}">A社 売上入金</span>
+                                            <br/>
+                                            <small class="text-muted" th:text="${transaction.categoryName != null ? transaction.categoryName : '未分類'}"></small>
+                                        </td>
+                                        <td class="text-end">
+                                            <span th:text="${transaction.budgetTransactionTypeName == '入金' ? '+' : '-'}"
+                                                  th:classappend="${transaction.budgetTransactionTypeName == '入金' ? 'text-success' : 'text-danger'}">
+                                                +
+                                            </span>
+                                            <span th:text="'¥' + ${#numbers.formatDecimal(transaction.plannedAmount, 0, 'DEFAULT', 0, 'DEFAULT')}"
+                                                  th:classappend="${transaction.budgetTransactionTypeName == '入金' ? 'text-success' : 'text-danger'}">
+                                                300,000
+                                            </span>
+                                        </td>
+                                        <td class="text-center">
+                                            <!-- TODO: 取引の編集・完了アクション (F-B03) -->
+                                            <button type="button" class="btn btn-sm btn-outline-primary">編集</button>
+                                        </td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
-
-                </div>
-
+                    <div th:if="${transactions.isEmpty()}" class="card shadow-sm flex-grow-1">
+                        <div class="card-body">
+                            <p class="text-muted text-center">取引予定がありません。</p>
+                        </div>
+                    </div>
                 <!-- 右側コンテンツエリア -->
                 <div class="col-lg-7 d-flex flex-column">
 
@@ -204,7 +264,7 @@
                     <div class="card shadow-sm mb-4">
                         <div class="card-header fw-bold">残高推移予測</div>
                         <div class="card-body">
-                            <!--/* TODO: Chart.jsでグラフを描画 (F-B01) */-->
+                            <!-- TODO: Chart.jsでグラフを描画 (F-B01) -->
                             <canvas id="balanceChart" height="200"></canvas>
                         </div>
                     </div>
@@ -213,7 +273,7 @@
                     <div class="card shadow-sm flex-grow-1">
                         <div class="card-header fw-bold">目標・借入</div>
                         <div class="card-body">
-                            <!--/* TODO: 目標と借入リストを表示 (F-B06, F-B07) */-->
+                            <!-- TODO: 目標と借入リストを表示 (F-B06, F-B07) -->
                              <p>ここに目標・借入の一覧が表示されます。</p>
                         </div>
                     </div>
@@ -228,20 +288,33 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
-<!-- Custom JS for Chart -->
 <script>
-    // TODO: Controllerからデータを受け取り、グラフを初期化する
-    const ctx = document.getElementById('balanceChart');
-    new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: ['7月', '8月', '9月', '10月', '11月', '12月'],
-            datasets: [{
-                label: '残高予測',
-                data: [1234567, 1384567, 1234567, 1734567, 1584567, 1434567 ],
-                borderColor: 'rgb(0, 31, 63)',
-                tension: 0.1
-            }]
+    document.addEventListener('DOMContentLoaded', function () {
+        // TODO: Controllerからデータを受け取り、グラフを初期化する (F-B01)
+        const ctx = document.getElementById('balanceChart');
+        if (ctx) {
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['7月', '8月', '9月', '10月', '11月', '12月'], // TODO: 動的なラベル
+                    datasets: [{
+                        label: '残高予測',
+                        data: [1234567, 1384567, 1234567, 1734567, 1584567, 1434567], // TODO: 動的なデータ
+                        borderColor: 'rgb(0, 31, 63)',
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            ticks: {
+                                callback: function (value) { return '¥' + value.toLocaleString(); }
+                            }
+                        }
+                    }
+                }
+            });
         }
     });
 </script>
