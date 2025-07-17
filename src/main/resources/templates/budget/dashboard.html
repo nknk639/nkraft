@@ -246,15 +246,15 @@
                                                 <small class="text-muted" th:text="${transaction.categoryName} ?: '未分類'"></small>
                                             </td>                                            
                                             <td class="text-end align-middle">
-                                                <span th:text="${transaction.budgetTransactionType.name == '入金' ? '+' : '-'}" th:classappend="${transaction.budgetTransactionType.name == '入金' ? 'text-success' : 'text-danger'}"></span>
-                                                <span th:text="${#numbers.formatDecimal(transaction.plannedAmount, 0, 'COMMA', 0, 'POINT')}" th:classappend="${transaction.budgetTransactionType.name == '入金' ? 'text-success' : 'text-danger'}"></span>
+                                                <span th:text="${transaction.budgetTransactionTypeName == '入金' ? '+' : '-'}" th:classappend="${transaction.budgetTransactionTypeName == '入金' ? 'text-success' : 'text-danger'}"></span>
+                                                <span th:text="${#numbers.formatDecimal(transaction.plannedAmount, 0, 'COMMA', 0, 'POINT')}" th:classappend="${transaction.budgetTransactionTypeName == '入金' ? 'text-success' : 'text-danger'}"></span>
                                             </td>
                                             <td class="text-center align-middle">
-                                                <input type="number" class="form-control form-control-sm text-end actual-amount-input" th:value="${transaction.plannedAmount}" placeholder="実績額" th:data-transaction-id="${transaction.id}">
+                                                <input type="number" class="form-control form-control-sm text-end actual-amount-input" th:value="${transaction.plannedAmount}" placeholder="実績額" th:data-transaction-id="${transaction.transactionId}">
                                             </td>
                                             <td class="text-center align-middle">
                                                 <div class="form-check form-switch d-flex justify-content-center">
-                                                    <input class="form-check-input complete-toggle" type="checkbox" role="switch" th:data-transaction-id="${transaction.id}">
+                                                    <input class="form-check-input complete-toggle" type="checkbox" role="switch" th:data-transaction-id="${transaction.transactionId}">
                                                 </div>
                                             </td>
                                             <td class="text-end align-middle fw-bold transaction-balance">
@@ -376,7 +376,7 @@
             rows.forEach((row, index) => {
                 const transaction = transactions[index];
                 const amount = transaction.plannedAmount;                
-                const type = transaction.budgetTransactionType.name;
+                const type = transaction.budgetTransactionTypeName;
 
                 if (type === '入金') {
                     currentBalance += amount;
