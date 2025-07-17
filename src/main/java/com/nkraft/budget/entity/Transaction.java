@@ -61,13 +61,21 @@ public class Transaction {
     @Column(name = "actual_amount")
     private BigDecimal actualAmount;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "transaction_status", nullable = false, columnDefinition = "ENUM('PLANNED', 'COMPLETED')")
+    @Column(name = "transaction_status", nullable = false, columnDefinition = "ENUM('予定', '完了')")
     private TransactionStatus transactionStatus;
 
     @Column(name = "memo")
     private String memo;
 
-    // NOTE: recurring_id, borrow_id, goal_id の関連は、
-    // 対応するエンティティが作成された後に追加します。
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "recurring_id", foreignKey = @jakarta.persistence.ForeignKey(name = "fk_transactions_recurring_transactions"))
+    private RecurringTransaction recurringTransaction;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "borrow_id", foreignKey = @jakarta.persistence.ForeignKey(name = "fk_transactions_borrows"))
+    private Borrow borrow;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "goal_id", foreignKey = @jakarta.persistence.ForeignKey(name = "fk_transactions_goals"))
+    private Goal goal;
 }

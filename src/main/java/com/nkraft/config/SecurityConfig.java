@@ -27,7 +27,7 @@ public class SecurityConfig {
                         // ログイン処理を行うURL (Spring Securityが自動で処理)
                         .loginProcessingUrl("/login")
                         // ログイン成功時のリダイレクト先
-                        .defaultSuccessUrl("/dashboard", true) // "/dashboard" に変更
+                        .defaultSuccessUrl("/budget/", true) // コントローラーのマッピングに合わせて修正
                         // ログインページは全員にアクセスを許可
                         .permitAll())
                 .logout(logout -> logout

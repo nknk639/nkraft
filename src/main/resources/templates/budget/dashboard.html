@@ -142,53 +142,65 @@
 
             <!-- メインコンテンツエリア -->
             <div class="row g-4">
-
+                <div class="col-12">
                     <!-- 取引クイック登録 -->
                     <div class="card shadow-sm mb-4">
                         <div class="card-header fw-bold">取引クイック登録</div>
                         <div class="card-body">
                             <!--/* TODO: フォーム実装 (F-B03) */-->
-                            <form id="quickAddTransactionForm">
+                            <form id="quickAddTransactionForm" th:action="@{/budget/transactions}" method="post" class="needs-validation" novalidate>
                                 <div class="row g-3 align-items-center">
+                                    <div class="col-auto">
+                                        <label for="account" class="col-form-label">口座</label>
+                                    </div>
+                                    <div class="col-auto">
+                                        <select class="form-select form-select-sm" id="account" name="accountId" style="width: 120px;" required>
+                                            <option value="">選択</option>
+                                            <option th:each="acc : ${accounts}"
+                                                    th:value="${acc.accountId}"
+                                                    th:text="${acc.accountName}"
+                                                    th:selected="${acc.isMain}">メイン口座</option>
+                                        </select>
+                                    </div>
                                     <div class="col-auto">
                                         <label for="transactionDate" class="col-form-label">取引日</label>
                                     </div>
                                     <div class="col-auto">
-                                        <input type="date" class="form-control form-control-sm" id="transactionDate" style="width: 120px;" required>
+                                        <input type="date" class="form-control form-control-sm" id="transactionDate" name="transactionDate" style="width: 120px;" required>
                                     </div>
                                     <div class="col-auto">
                                         <label for="amount" class="col-form-label">金額</label>
                                     </div>
                                     <div class="col-auto">
-                                        <input type="number" class="form-control form-control-sm" id="amount" style="width: 100px;" required>
+                                        <input type="number" class="form-control form-control-sm" id="amount" name="amount" style="width: 100px;" required>
                                     </div>
                                     <div class="col-auto">
                                         <label for="transactionType" class="col-form-label">取引種別</label>
                                     </div>
                                     <div class="col-auto">
-                                        <select class="form-select form-select-sm" id="transactionType" style="width: 120px;" required>
+                                        <select class="form-select form-select-sm" id="transactionType" name="budgetTransactionTypeId" style="width: 120px;" required>
                                             <option value="">選択</option>
-                                            <option value="1">入金</option>
-                                            <option value="2">出金</option>
-                                            <option value="3">振替</option>
+                                            <option th:each="type : ${transactionTypes}"
+                                                    th:value="${type.id}"
+                                                    th:text="${type.name}">入金</option>
                                         </select>
                                     </div>
                                     <div class="col-auto">
                                         <label for="category" class="col-form-label">カテゴリ</label>
                                     </div>
                                     <div class="col-auto">
-                                        <select class="form-select form-select-sm" id="category" style="width: 120px;">
+                                        <select class="form-select form-select-sm" id="category" name="categoryId" style="width: 120px;">
                                             <option value="">未分類</option>
-                                            <option value="1">食費</option>
-                                            <option value="2">家賃</option>
-                                            <option value="3">給料</option>
+                                            <option th:each="cat : ${categories}"
+                                                    th:value="${cat.id}"
+                                                    th:text="${cat.categoryName}">給料</option>
                                         </select>
                                     </div>
                                 </div>
                                 <div class="mt-2 d-flex align-items-center">
                                     <div class="flex-grow-1">
                                         <label for="memo" class="visually-hidden">メモ</label>
-                                        <input type="text" class="form-control form-control-sm" id="memo" placeholder="メモ (1行)">
+                                        <input type="text" class="form-control form-control-sm" id="memo" name="memo" placeholder="メモ (任意)">
                                     </div>
                                     <button type="submit" class="btn btn-sm ms-2" style="background-color: var(--sidebar-accent-color); color: var(--sidebar-bg);">登録</button>
                                 </div>
@@ -205,8 +217,8 @@
                             <p>ここに繰り返し予定のアコーディオンが表示されます。</p>
                         </div>
                     </div>
-                    <!-- 取引予定リスト -->
-                    <div th:if="${not transactions.isEmpty()}" class="card shadow-sm flex-grow-1">
+
+                    <div th:if="${transactions != null and not #lists.isEmpty(transactions)}" class="card shadow-sm flex-grow-1">
                         <div class="card-header fw-bold d-flex justify-content-between align-items-center">
                             取引予定リスト
                             <!-- TODO: 取引シミュレーション機能 (F-B02) -->
@@ -214,52 +226,52 @@
                         </div>
                         <div class="card-body p-0">
                             <div style="max-height: 400px; overflow-y: auto;">
-                                <table class="table table-hover mb-0">
+                                <!-- F-B03, F-B09 -->
+                                <table class="table table-hover mb-0" id="planned-transactions-table">
                                     <thead>
                                     <tr>
-                                        <th scope="col" style="width: 20%;">日付</th>
-                                        <th scope="col" style="width: 40%;">内容</th>
-                                        <th scope="col" class="text-end" style="width: 25%;">予定額</th>
-                                        <th scope="col" class="text-center" style="width: 15%;">アクション</th>
+                                        <th scope="col" style="width: 12%;">日付</th>
+                                        <th scope="col" style="width: 25%;">内容</th>
+                                        <th scope="col" class="text-end" style="width: 15%;">予定額</th>
+                                        <th scope="col" class="text-center" style="width: 18%;">実績額</th>
+                                        <th scope="col" class="text-center" style="width: 10%;">完了</th>
+                                        <th scope="col" class="text-end" style="width: 20%;">残高</th>
                                     </tr>
                                     </thead>
-                                    <tbody>
-                                    <!-- TODO: Controllerから渡された取引予定リストをループ表示 (F-B02, F-B03) -->
-                                    <tr th:each="transaction : ${transactions}">
-                                        <td th:text="${#dates.format(transaction.transactionDate, 'yyyy-MM-dd')}">2025-08-01</td>
-                                        <td>
-                                            <span th:text="${transaction.memo}">A社 売上入金</span>
-                                            <br/>
-                                            <small class="text-muted" th:text="${transaction.categoryName != null ? transaction.categoryName : '未分類'}"></small>
-                                        </td>
-                                        <td class="text-end">
-                                            <span th:text="${transaction.budgetTransactionTypeName == '入金' ? '+' : '-'}"
-                                                  th:classappend="${transaction.budgetTransactionTypeName == '入金' ? 'text-success' : 'text-danger'}">
-                                                +
-                                            </span>
-                                            <span th:text="'¥' + ${#numbers.formatDecimal(transaction.plannedAmount, 0, 'DEFAULT', 0, 'DEFAULT')}"
-                                                  th:classappend="${transaction.budgetTransactionTypeName == '入金' ? 'text-success' : 'text-danger'}">
-                                                300,000
-                                            </span>
-                                        </td>
-                                        <td class="text-center">
-                                            <!-- TODO: 取引の編集・完了アクション (F-B03) -->
-                                            <button type="button" class="btn btn-sm btn-outline-primary">編集</button>
-                                        </td>
-                                    </tr>
+                                    <tbody id="transactions-body">
+                                        <tr th:each="transaction : ${transactions}">
+                                            <td th:text="${#temporals.format(transaction.transactionDate, 'yyyy-MM-dd')}" class="align-middle"></td>
+                                            <td class="align-middle">
+                                                <span th:text="${transaction.memo}" class="d-block"></span>
+                                                <small class="text-muted" th:text="${transaction.categoryName} ?: '未分類'"></small>
+                                            </td>                                            
+                                            <td class="text-end align-middle">
+                                                <span th:text="${transaction.budgetTransactionType.name == '入金' ? '+' : '-'}" th:classappend="${transaction.budgetTransactionType.name == '入金' ? 'text-success' : 'text-danger'}"></span>
+                                                <span th:text="${#numbers.formatDecimal(transaction.plannedAmount, 0, 'COMMA', 0, 'POINT')}" th:classappend="${transaction.budgetTransactionType.name == '入金' ? 'text-success' : 'text-danger'}"></span>
+                                            </td>
+                                            <td class="text-center align-middle">
+                                                <input type="number" class="form-control form-control-sm text-end actual-amount-input" th:value="${transaction.plannedAmount}" placeholder="実績額" th:data-transaction-id="${transaction.id}">
+                                            </td>
+                                            <td class="text-center align-middle">
+                                                <div class="form-check form-switch d-flex justify-content-center">
+                                                    <input class="form-check-input complete-toggle" type="checkbox" role="switch" th:data-transaction-id="${transaction.id}">
+                                                </div>
+                                            </td>
+                                            <td class="text-end align-middle fw-bold transaction-balance">
+                                                <!-- JavaScriptで計算した残高がここに挿入される -->
+                                            </td>
+                                        </tr>
                                     </tbody>
                                 </table>
                             </div>
                         </div>
                     </div>
-                    <div th:if="${transactions.isEmpty()}" class="card shadow-sm flex-grow-1">
+                    <div th:if="${transactions == null or #lists.isEmpty(transactions)}" class="card shadow-sm flex-grow-1">
                         <div class="card-body">
-                            <p class="text-muted text-center">取引予定がありません。</p>
+                            <p class="text-muted text-center mb-0">メイン口座が設定されていないか、取引予定がありません。</p>
                         </div>
                     </div>
-                <!-- 右側コンテンツエリア -->
-                <div class="col-lg-7 d-flex flex-column">
-
+                    
                     <!-- 残高推移予測グラフ -->
                     <div class="card shadow-sm mb-4">
                         <div class="card-header fw-bold">残高推移予測</div>
@@ -278,17 +290,47 @@
                         </div>
                     </div>
                 </div>
-            </div>
+            </div> <!-- .row.g-4 の閉じタグ -->
 
         </main>
     </div>
 </div>
 
+<!-- F-B09 差額貯金モーダル -->
+<div class="modal fade" id="savingsModal" tabindex="-1" aria-labelledby="savingsModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="savingsModalLabel">差額を貯金へ</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>予定より少ない支出ですみました。差額を振り替える貯金口座を選択してください。</p>
+                <form id="savingsForm">
+                    <input type="hidden" id="savingsTransactionId" name="transactionId">
+                    <input type="hidden" id="savingsActualAmount" name="actualAmount">
+                    <div class="mb-3">
+                        <label for="savingsAccountId" class="form-label">振替先口座</label>
+                        <select class="form-select" id="savingsAccountId" name="savingsAccountId" required>
+                            <option th:each="acc : ${savingsAccounts}" th:value="${acc.accountId}" th:text="${acc.accountName}">貯蓄用口座</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                <button type="button" class="btn btn-primary" id="confirmSavingsBtn">OK</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 <!-- Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
-<script>
+<script th:inline="javascript">
     document.addEventListener('DOMContentLoaded', function () {
         // TODO: Controllerからデータを受け取り、グラフを初期化する (F-B01)
         const ctx = document.getElementById('balanceChart');
@@ -316,6 +358,49 @@
                 }
             });
         }
+
+        // F-B02, F-B03: フロントエンドでの残高計算ロジック
+        const calculateBalances = () => {
+            // ThymeleafからJavaオブジェクトを直接受け取る
+            const initialBalance = /*[[${mainAccountBalance}]]*/ 0;
+            const transactions = /*[[${transactions}]]*/ [];
+            
+            if (!transactions || transactions.length === 0) {
+                return;
+            }
+
+            let currentBalance = initialBalance;
+
+            const rows = document.querySelectorAll('#transactions-body tr');
+
+            rows.forEach((row, index) => {
+                const transaction = transactions[index];
+                const amount = transaction.plannedAmount;                
+                const type = transaction.budgetTransactionType.name;
+
+                if (type === '入金') {
+                    currentBalance += amount;
+                } else { // 出金 or 振替
+                    currentBalance -= amount;
+                }
+
+                const balanceCell = row.querySelector('.transaction-balance');
+                if (balanceCell) {
+                    // 3桁区切りで残高を表示
+                    balanceCell.textContent = `¥ ${Math.round(currentBalance).toLocaleString()}`;
+                    if(currentBalance < 0){
+                        balanceCell.classList.add('text-danger');
+                    } else {
+                        balanceCell.classList.remove('text-danger');
+                    }
+                }
+            });
+        };
+
+        // ページ読み込み時に初回計算を実行
+        calculateBalances();
+
+        // TODO: 実績額の変更やトグルの操作時に再計算するイベントリスナーをここに追加
     });
 </script>
 </body>

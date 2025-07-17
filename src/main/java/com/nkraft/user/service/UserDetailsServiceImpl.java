@@ -1,6 +1,5 @@
 package com.nkraft.user.service;
 
-import java.util.Collections;
 
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -8,6 +7,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
+import com.nkraft.user.model.LoginUserDetails;
 import com.nkraft.user.repository.NkraftUserRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -21,12 +21,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         return nkraftUserRepository.findByUsername(username)
-                .map(user -> new org.springframework.security.core.userdetails.User(
-                        user.getUsername(),
-                        user.getPassword(),
-                        // 今回はロールベースの認可は要件にないため、固定の権限を付与します。
-                        Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"))
-                ))
-                .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username));
+            .map(user -> new LoginUserDetails(user)) // LoginUserDetailsを返すように変更
+            .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username));
     }
 }

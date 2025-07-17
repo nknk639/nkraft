@@ -15,3 +15,17 @@ spring:
     hibernate:
       # Flywayでスキーマを管理し、起動時にEntityとの整合性を検証します。
       ddl-auto: validate
+    # プロパティを追加して、発行されるSQLを整形して表示
+    properties:
+      hibernate:
+        format_sql: true
+
+# ===============================
+# = LOGGING (for Development)
+# ===============================
+logging:
+  level:
+    # 発行されたSQLを表示
+    org.hibernate.SQL: DEBUG
+    # SQLにバインドされたパラメータ（?の部分）の値を表示
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
