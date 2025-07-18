@@ -50,6 +50,7 @@
 | **F-B07** | **目標管理** | **目的:** 貯金などの目標達成に向けたモチベーションを維持し、進捗を可視化する。<br>**主要プロセス:**<br>1. **一覧画面:** ユーザーは目標のマスターデータ（目標名、目標金額）を登録する。既存の目標は達成率を示すプログレスバーと共にリスト表示される。<br>2. **詳細画面:** 特定の目標に対する積立をクイック入力フォームから登録する。この操作により、`transactions`と`goal_achievements`にレコードが作成される。<br>3. **データフロー:** 積立に紐づく取引が「完了」ステータスになった際、`goals`テーブルの積立済み金額が更新される。<br>**関連データ:** `goals` (C/R/U), `goal_achievements` (C/R/D), `transactions` (C/R/D) |
 | **F-B08** | **口座管理** | **目的:** アプリ内で管理する預金口座や財布（ウォレット）を定義・管理する。<br>**主要プロセス:**<br>1. ユーザーはマスター管理ページで、新規口座（口座名、初期残高）を作成できる。<br>2. 既存の口座情報の編集、および削除が可能。<br>**関連データ:** `accounts` (CREATE, READ, UPDATE, DELETE) |
 | **F-B12** | **カテゴリ管理** | **目的:** 取引の分類に使用するカテゴリをユーザー自身が定義・管理できるようにする。<br>**主要プロセス:**<br>1. ユーザーはマスター管理ページで、新規カテゴリ（カテゴリ名）を作成できる。<br>2. 既存のカテゴリ名の編集、および削除が可能。<br>**関連データ:** `categories` (CREATE, READ, UPDATE, DELETE) |
+| **F-B13** | **論理削除** | **目的:** ユーザーの誤操作によるデータ損失を防ぎ、データの完全性を保つ。<br>**主要プロセス:**<br>1. ユーザーが削除操作を行うと、対象レコードは物理的に削除されず、`is_deleted`フラグが`1`に更新される。<br>2. アプリケーションは原則として`is_deleted = 0`のレコードのみを有効なデータとして扱う。<br>**対象テーブル:** `transactions`, `accounts`, `categories`, `recurring_transactions`, `borrows`, `goals` |
 
 ### 2.4. 資産管理・レポート機能 (Asset & Report Features)
 資産の全体像を管理し、分析と改善を支援する機能群。**全ての機能はログイン中のユーザーに紐づくデータのみを対象とする。**
@@ -72,15 +73,15 @@
 | 画面名 | URL | 概要 | 主要機能 | 関連DB |
 | :--- | :--- | :--- | :--- | :--- |
 | **ログインページ** | `/login` | アプリケーションへのアクセス認証を行う。 | `F-A01` | `nkraft_users` |
-| **ダッシュボード** | `/budget/` | **未来のキャッシュフロー予測に特化したトップページ。**<br>**【表示コンポーネント】**<br>1. **取引入力フォーム:** 新規の取引予定を登録する。<br>2. **繰り返し予定ボタン:** アコーディオン形式で表示。ボタンクリックで次の予定を生成。<br>3. **残高推移予測グラフ:** 全ての予定取引を基にした未来の残高推移を可視化。<br>4. **取引予定リスト:** グラフの元データとなる全予定取引をリスト表示。スクロール可能。各行に実績額入力欄、完了/編集ボタンを配置。表示項目は `transaction_date`, `planned_amount`, `actual_amount`, `budget_transaction_type_name`, `category_name`。 <br>5. **口座残高カード:** 各口座の現在残高をカード形式で表示。クリックで取引一覧へ遷移。<br>6. **目標・借入一覧:** 各マスターデータのサマリーをリスト表示。 | `F-B01`, `F-B02`, `F-B03`, `F-B05`, `F-B10` | `nkraft_users`, `accounts`, `transactions`, `borrows`, `goals` |
-| **取引一覧** | `/budget/transactions` | 全ての取引（過去の実績含む）を詳細に確認・管理する。**口座切り替えフィルターを持つ。** | `F-B04`, `F-B03` | `transactions` |
+| **ダッシュボード** | `/budget/` | **未来のキャッシュフロー予測に特化したトップページ。**<br>**【表示コンポーネント】**<br>1. **取引入力フォーム:** 新規の取引予定を登録する。<br>2. **繰り返し予定ボタン:** アコーディオン形式で表示。ボタンクリックで次の予定を生成。<br>3. **残高推移予測グラフ:** 全ての予定取引を基にした未来の残高推移を可視化。<br>4. **取引予定リスト:** グラフの元データとなる全予定取引をリスト表示。スクロール可能。各行に実績額入力欄、完了/編集/**削除**ボタンを配置。表示項目は `transaction_date`, `planned_amount`, `actual_amount`, `budget_transaction_type_name`, `category_name`。 <br>5. **口座残高カード:** 各口座の現在残高をカード形式で表示。クリックで取引一覧へ遷移。<br>6. **目標・借入一覧:** 各マスターデータのサマリーをリスト表示。 | `F-B01`, `F-B02`, `F-B03`, `F-B05`, `F-B10`, `F-B13` | `nkraft_users`, `accounts`, `transactions`, `borrows`, `goals` |
+| **取引一覧** | `/budget/transactions` | 全ての取引（過去の実績含む）を詳細に確認・管理する。**口座切り替えフィルターを持つ。** | `F-B04`, `F-B03`, `F-B13` | `transactions` |
 | **予実レポート** | `/budget/report` | **過去の実績分析に特化。**月次の予実をカテゴリ別棒グラフで比較する。 | `F-B11` | `transactions` |
-| **借入一覧** | `/budget/borrows` | 登録されている全ての借入を管理する。 | `F-B06` (一覧, 新規) | `borrows` |
+| **借入一覧** | `/budget/borrows` | 登録されている全ての借入を管理する。 | `F-B06` (一覧, 新規), `F-B13` | `borrows` |
 | **借入詳細** | `/budget/borrows/{id}` | 特定の借入に対する返済を記録・管理する。 | `F-B06` (詳細), `F-B03` | `borrows`, `repayments`, `transactions` |
-| **目標一覧** | `/budget/goals` | 登録されている全ての目標を管理する。 | `F-B07` (一覧, 新規) | `goals` |
+| **目標一覧** | `/budget/goals` | 登録されている全ての目標を管理する。 | `F-B07` (一覧, 新規), `F-B13` | `goals` |
 | **目標詳細** | `/budget/goals/{id}` | 特定の目標に対する積立を記録・管理する。 | `F-B07` (詳細), `F-B03` | `goals`, `goal_achievements`, `transactions` |
-| **繰り返し予定** | `/budget/recurring` | 定期的な入出金ルールを管理する。ルール種別に応じて動的に入力フォームが変化する。 | `F-B05` | `recurring_transactions` |
-| **マスター管理** | `/budget/management` | **口座やカテゴリなどのマスターデータを管理する。タブで各管理機能を切り替える。** | `F-B08`, `F-B12` | `accounts`, `categories` |
+| **繰り返し予定** | `/budget/recurring` | 定期的な入出金ルールを管理する。ルール種別に応じて動的に入力フォームが変化する。 | `F-B05`, `F-B13` | `recurring_transactions` |
+| **マスター管理** | `/budget/management` | **口座やカテゴリなどのマスターデータを管理する。タブで各管理機能を切り替える。** | `F-B08`, `F-B12`, `F-B13` | `accounts`, `categories` |
 
 ---
 
@@ -98,6 +99,7 @@
   - `balance` (現在の残高)
   - `is_main` (TINYINT(1))
   - `is_savings` (TINYINT(1))
+  - `is_deleted` (TINYINT(1) DEFAULT 0)
 - **`budget_transaction_types` (取引種別マスタ)**
   - `budget_transaction_type_id` (PK)
   - `budget_transaction_type_name`
@@ -105,6 +107,7 @@
   - `category_id` (PK)
   - `nkraft_user_id` (FK: `nkraft_users`)
   - `category_name`
+  - `is_deleted` (TINYINT(1) DEFAULT 0)
 - **`transactions` (取引)**
   - `transaction_id` (PK)
   - `nkraft_user_id` (FK: `nkraft_users`)
@@ -119,6 +122,7 @@
   - `recurring_id` (FK: `recurring_transactions`)
   - `borrow_id` (FK: `borrows`)
   - `goal_id` (FK: `goals`)
+  - `is_deleted` (TINYINT(1) DEFAULT 0)
 - **`recurring_transactions` (繰り返し予定)**
   - `recurring_transaction_id` (PK)
   - `nkraft_user_id` (FK: `nkraft_users`)
@@ -131,11 +135,13 @@
   - `rule_type` (ENUM('毎月', '毎週'))
   - `day_of_month` (INTEGER, 1-31, `rule_type`が'毎月'の場合に利用)
   - `day_of_week` (INTEGER, 0-6 for Sun-Sat, `rule_type`が'毎週'の場合に利用)
+  - `is_deleted` (TINYINT(1) DEFAULT 0)
 - **`borrows` (借入)**
   - `borrow_id` (PK)
   - `nkraft_user_id` (FK: `nkraft_users`)
   - `borrow_name`
   - `total_amount`, `repaid_amount`
+  - `is_deleted` (TINYINT(1) DEFAULT 0)
 - **`repayments` (返済履歴)**
   - `repayment_id` (PK)
   - `transaction_id` (FK: `transactions`)
@@ -145,6 +151,7 @@
   - `nkraft_user_id` (FK: `nkraft_users`)
   - `goal_name`
   - `target_amount`, `saved_amount`
+  - `is_deleted` (TINYINT(1) DEFAULT 0)
 - **`goal_achievements` (目標達成履歴)**
   - `goal_achievement_id` (PK)
   - `transaction_id` (FK: `transactions`)

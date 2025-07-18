@@ -1,6 +1,7 @@
 package com.nkraft.budget.entity;
 
 import java.math.BigDecimal;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.nkraft.user.entity.NkraftUser;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -36,6 +37,7 @@ public class Account {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "nkraft_user_id", nullable = false, foreignKey = @ForeignKey(name = "fk_accounts_nkraft_users"))
+    @JsonIgnore
     private NkraftUser nkraftUser;
 
     @Column(name = "account_name", nullable = false)

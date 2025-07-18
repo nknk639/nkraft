@@ -1,5 +1,6 @@
 package com.nkraft.budget.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -32,6 +33,7 @@ public class Category {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "nkraft_user_id", nullable = false, foreignKey = @ForeignKey(name = "fk_categories_nkraft_users"))
+    @JsonIgnore
     private NkraftUser nkraftUser;
 
     @Column(name = "category_name", nullable = false)

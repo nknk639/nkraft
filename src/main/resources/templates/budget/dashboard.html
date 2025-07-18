@@ -6,6 +6,10 @@
     <title>NKraft - 予算管理ダッシュボード</title>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
@@ -126,7 +130,7 @@
                     <a th:href="@{/budget/transactions(accountId=${account.accountId})}" class="text-decoration-none">
                         <div class="card shadow-sm h-100">
                             <div class="card-body">
-                                <h6 class="card-subtitle mb-2 text-muted" th:text="${account.accountName}">口座名</h6>
+                                <h6 class="card-subtitle mb-2 text-muted" th:text="${account.accountName}" th:classappend="${account.isMain} ? 'fw-bold' : ''">口座名</h6>
                                 <p class="card-text fs-4 fw-bold text-primary" th:text="'¥' + ${#numbers.formatDecimal(account.balance, 0, 'DEFAULT', 0, 'DEFAULT')}">1,234,567</p>
                             </div>
                         </div>
@@ -233,13 +237,15 @@
                                         <th scope="col" style="width: 12%;">日付</th>
                                         <th scope="col" style="width: 25%;">内容</th>
                                         <th scope="col" class="text-end" style="width: 15%;">予定額</th>
-                                        <th scope="col" class="text-center" style="width: 18%;">実績額</th>
+                                        <th scope="col" class="text-center" style="width: 15%;">実績額</th>
                                         <th scope="col" class="text-center" style="width: 10%;">完了</th>
-                                        <th scope="col" class="text-end" style="width: 20%;">残高</th>
+                                        <th scope="col" class="text-center" style="width: 8%;">操作</th>
+                                        <th scope="col" class="text-end" style="width: 15%;">残高</th>
                                     </tr>
                                     </thead>
                                     <tbody id="transactions-body">
-                                        <tr th:each="transaction : ${transactions}">
+                                        <!-- iterStatを使用してループのインデックスを取得 -->
+                                        <tr th:each="transaction, iterStat : ${transactions}">
                                             <td th:text="${#temporals.format(transaction.transactionDate, 'yyyy-MM-dd')}" class="align-middle"></td>
                                             <td class="align-middle">
                                                 <span th:text="${transaction.memo}" class="d-block"></span>
@@ -255,6 +261,23 @@
                                             <td class="text-center align-middle">
                                                 <div class="form-check form-switch d-flex justify-content-center">
                                                     <input class="form-check-input complete-toggle" type="checkbox" role="switch" th:data-transaction-id="${transaction.transactionId}">
+                                                </div>
+                                            </td>
+                                            <td class="text-center align-middle">
+                                                <div class="btn-group btn-group-sm" role="group">
+                                                    <button type="button" class="btn btn-outline-secondary edit-btn"
+                                                            data-bs-toggle="modal"
+                                                            data-bs-target="#editTransactionModal"
+                                                            th:attr="data-transaction-index=${iterStat.index}"
+                                                            title="編集">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
+                                                    <button type="button" class="btn btn-outline-danger delete-btn"
+                                                            data-bs-toggle="modal"
+                                                            data-bs-target="#deleteConfirmModal"
+                                                            th:data-transaction-id="${transaction.transactionId}" title="削除">
+                                                        <i class="fas fa-trash-alt"></i>
+                                                    </button>
                                                 </div>
                                             </td>
                                             <td class="text-end align-middle fw-bold transaction-balance">
@@ -320,6 +343,78 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
                 <button type="button" class="btn btn-primary" id="confirmSavingsBtn">OK</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Transaction Modal -->
+<div class="modal fade" id="editTransactionModal" tabindex="-1" aria-labelledby="editTransactionModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editTransactionModalLabel">取引を編集</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <!-- TODO: /budget/transactions/update エンドポイントをControllerに実装する必要がある -->
+            <form id="editTransactionForm" th:action="@{/budget/transactions/update}" method="post">
+                <div class="modal-body">
+                    <input type="hidden" id="editTransactionId" name="transactionId">
+
+                    <div class="mb-3">
+                        <label for="editTransactionDate" class="form-label">取引日</label>
+                        <input type="date" class="form-control" id="editTransactionDate" name="transactionDate" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="editAmount" class="form-label">予定額</label>
+                        <input type="number" class="form-control" id="editAmount" name="plannedAmount" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="editTransactionType" class="form-label">取引種別</label>
+                        <select class="form-select" id="editTransactionType" name="budgetTransactionTypeId" required>
+                            <option th:each="type : ${transactionTypes}" th:value="${type.id}" th:text="${type.name}"></option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="editCategory" class="form-label">カテゴリ</label>
+                        <select class="form-select" id="editCategory" name="categoryId">
+                            <option value="">未分類</option>
+                            <option th:each="cat : ${categories}" th:value="${cat.id}" th:text="${cat.categoryName}"></option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="editMemo" class="form-label">メモ</label>
+                        <input type="text" class="form-control" id="editMemo" name="memo">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                    <button type="submit" class="btn btn-primary">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-labelledby="deleteConfirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteConfirmModalLabel">取引の削除</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                この取引を削除してもよろしいですか？この操作は元に戻せません。
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                <!-- このボタンにJavaScriptでIDを設定する -->
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">削除</button>
             </div>
         </div>
     </div>
@@ -401,6 +496,216 @@
         calculateBalances();
 
         // TODO: 実績額の変更やトグルの操作時に再計算するイベントリスナーをここに追加
+
+        // F-B03: Edit transaction modal logic
+        const editTransactionModal = document.getElementById('editTransactionModal');
+        if (editTransactionModal) {
+            // ThymeleafからJavaScriptにデータを渡す
+            const transactions = /*[[${transactions}]]*/ [];
+            const transactionTypes = /*[[${transactionTypes}]]*/ [];
+            const categories = /*[[${categories}]]*/ [];
+
+            // モーダルが表示される直前のイベントを捕捉
+            editTransactionModal.addEventListener('show.bs.modal', event => {
+                // イベントのトリガーとなったボタンを取得
+                const button = event.relatedTarget;
+                // ボタンのdata属性から、編集対象の取引のインデックスを取得
+                const transactionIndex = button.getAttribute('data-transaction-index');
+                const transaction = transactions[transactionIndex];
+
+                if (!transaction) return;
+
+                const modalForm = editTransactionModal.querySelector('form');
+
+                // フォームの各要素に取引データを設定
+                modalForm.querySelector('#editTransactionId').value = transaction.transactionId;
+                modalForm.querySelector('#editTransactionDate').value = transaction.transactionDate;
+                modalForm.querySelector('#editAmount').value = transaction.plannedAmount;
+                modalForm.querySelector('#editMemo').value = transaction.memo || ''; // メモがnullの場合も考慮
+
+                // 取引種別のドロップダウンを選択状態にする
+                const typeSelect = modalForm.querySelector('#editTransactionType');
+                const typeToSelect = transactionTypes.find(t => t.name === transaction.budgetTransactionTypeName);
+                if (typeToSelect) {
+                    typeSelect.value = typeToSelect.id;
+                }
+
+                // カテゴリのドロップダウンを選択状態にする
+                const categorySelect = modalForm.querySelector('#editCategory');
+                const categoryToSelect = categories.find(c => c.categoryName === transaction.categoryName);
+                if (categoryToSelect) {
+                    categorySelect.value = categoryToSelect.id;
+                } else {
+                    categorySelect.value = ""; // "未分類"の場合
+                }
+            });
+        }
+
+        // F-B03: Complete toggle logic
+        document.querySelectorAll('.complete-toggle').forEach(toggle => {
+            toggle.addEventListener('change', function() {
+                const transactionId = this.getAttribute('data-transaction-id');
+                const isChecked = this.checked;
+
+                if (!isChecked) {
+                    // 現状、完了の取り消しは実装しない
+                    this.checked = true;
+                    return;
+                }
+
+                const row = this.closest('tr');
+                const actualAmountInput = row.querySelector('.actual-amount-input');
+                const actualAmount = actualAmountInput.value.trim() === '' ? null : actualAmountInput.value;
+
+                // CSRFトークンを取得
+                const csrfToken = document.querySelector("meta[name='_csrf']").getAttribute("content");
+                const csrfHeader = document.querySelector("meta[name='_csrf_header']").getAttribute("content");
+
+                const formData = new URLSearchParams();
+                formData.append('transactionId', transactionId);
+                if (actualAmount !== null) {
+                    formData.append('actualAmount', actualAmount);
+                }
+
+                // ローディング表示としてトグルを無効化
+                this.disabled = true;
+                actualAmountInput.disabled = true;
+
+                fetch('/budget/transactions/complete', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        [csrfHeader]: csrfToken
+                    },
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    handleCompleteResponse(data, this, actualAmountInput, transactionId);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('通信エラーが発生しました。');
+                    this.checked = false;
+                    this.disabled = false;
+                    actualAmountInput.disabled = false;
+                });
+            });
+        });
+
+        function handleCompleteResponse(data, toggleElement, amountInputElement, transactionId) {
+            if (data.success) {
+                // F-B09: 差額貯金のモーダル表示判定
+                if (data.savingsDifference && data.savingsDifference > 0) {
+                    const savingsModal = new bootstrap.Modal(document.getElementById('savingsModal'));
+                    document.getElementById('savingsTransactionId').value = transactionId;
+                    // 差額をモーダルに表示
+                    const savingsModalLabel = document.getElementById('savingsModalLabel');
+                    savingsModalLabel.textContent = `差額 ${data.savingsDifference.toLocaleString()} 円を貯金へ`;
+                    // 差額をデータ属性として保持
+                    savingsModalLabel.dataset.difference = data.savingsDifference;
+                    savingsModal.show();
+                } else {
+                    // 差額貯金がない場合は通常通りリロード
+                    window.location.reload();
+                }
+            } else {
+                alert('エラー: ' + (data.message || '不明なエラーが発生しました。'));
+                toggleElement.checked = false;
+                toggleElement.disabled = false;
+                amountInputElement.disabled = false;
+            }
+        }
+
+        // F-B09: 差額貯金モーダルの確認ボタンのロジック
+        document.getElementById('confirmSavingsBtn').addEventListener('click', function() {
+            const transactionId = document.getElementById('savingsTransactionId').value;
+            const savingsAccountId = document.getElementById('savingsAccountId').value;
+            const differenceAmount = document.getElementById('savingsModalLabel').dataset.difference;
+
+            if (!savingsAccountId) {
+                alert('貯金先の口座を選択してください。');
+                return;
+            }
+
+            const csrfToken = document.querySelector("meta[name='_csrf']").getAttribute("content");
+            const csrfHeader = document.querySelector("meta[name='_csrf_header']").getAttribute("content");
+
+            const formData = new URLSearchParams();
+            formData.append('transactionId', transactionId);
+            formData.append('savingsAccountId', savingsAccountId);
+            formData.append('differenceAmount', differenceAmount);
+
+            fetch('/budget/transactions/create-savings-transfer', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    [csrfHeader]: csrfToken
+                },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                // 成功・失敗にかかわらずページをリロードして最新の状態を反映
+                window.location.reload();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('通信エラーが発生しました。');
+            });
+        });
+
+        // Delete transaction logic
+        const deleteConfirmModal = document.getElementById('deleteConfirmModal');
+        if (deleteConfirmModal) {
+            const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+            let transactionIdToDelete = null;
+
+            // モーダルが表示される直前に、削除対象のIDを保持
+            deleteConfirmModal.addEventListener('show.bs.modal', event => {
+                const button = event.relatedTarget;
+                transactionIdToDelete = button.getAttribute('data-transaction-id');
+            });
+
+            // 削除実行ボタンのクリックイベント
+            confirmDeleteBtn.addEventListener('click', () => {
+                if (!transactionIdToDelete) return;
+
+                const csrfToken = document.querySelector("meta[name='_csrf']").getAttribute("content");
+                const csrfHeader = document.querySelector("meta[name='_csrf_header']").getAttribute("content");
+
+                // RESTfulな慣例に従い、DELETEメソッドを使用し、URLにIDを含める
+                fetch('/budget/transactions/' + transactionIdToDelete, {
+                    method: 'DELETE',
+                    headers: {
+                        [csrfHeader]: csrfToken
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // 成功したらモーダルを閉じてからページをリロード
+                        const modalInstance = bootstrap.Modal.getInstance(deleteConfirmModal);
+                        if (modalInstance) {
+                            // モーダルが完全に閉じられた後にリロードする
+                            deleteConfirmModal.addEventListener('hidden.bs.modal', () => {
+                                window.location.reload();
+                            }, { once: true });
+                            modalInstance.hide();
+                        } else {
+                            // フォールバックとして、インスタンスが取得できなくてもリロード
+                            window.location.reload();
+                        }
+                    } else {
+                        alert('エラー: ' + (data.message || '削除に失敗しました。'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('通信エラーが発生しました。');
+                });
+            });
+        }
     });
 </script>
 </body>

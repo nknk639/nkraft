@@ -20,4 +20,9 @@ public class BudgetTransactionTypeService {
         return budgetTransactionTypeRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("BudgetTransactionType not found with id: " + id));
     }
+
+    public BudgetTransactionType getTransactionTypeByName(String name) {
+        return budgetTransactionTypeRepository.findByName(name)
+                .orElseThrow(() -> new EntityNotFoundException("BudgetTransactionType not found with name: " + name));
+    }
 }

@@ -78,4 +78,7 @@ public class Transaction {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "goal_id", foreignKey = @jakarta.persistence.ForeignKey(name = "fk_transactions_goals"))
     private Goal goal;
+
+    @Column(name = "is_deleted")
+    private Boolean isDeleted = false;
 }

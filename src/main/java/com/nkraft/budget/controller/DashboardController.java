@@ -9,19 +9,30 @@ import com.nkraft.budget.service.AccountService;
 import com.nkraft.budget.service.BudgetTransactionTypeService;
 import com.nkraft.budget.service.TransactionService;
 import com.nkraft.budget.service.CategoryService;
+import com.nkraft.budget.dto.TransactionUpdateDTO; // DTOのインポートを追加
 import com.nkraft.user.entity.NkraftUser;
 import com.nkraft.user.model.LoginUserDetails;
+
+import jakarta.persistence.EntityNotFoundException;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute; // ModelAttributeのインポートを追加
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-
 import java.math.BigDecimal;
+import org.springframework.web.bind.annotation.PathVariable;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Collections;
@@ -41,6 +52,8 @@ public class DashboardController {
     private final BudgetTransactionTypeService budgetTransactionTypeService;
     private final CategoryService categoryService;
     private final TransactionService transactionService;
+
+    private static final Logger logger = LoggerFactory.getLogger(DashboardController.class);
 
     /**
      * ダッシュボード画面を表示します。
@@ -125,5 +138,152 @@ public class DashboardController {
 
         redirectAttributes.addFlashAttribute("message", "取引を登録しました。");
         return "redirect:/budget/";
+    }
+    
+    /**
+     * 取引編集フォームから送信されたデータを処理し、取引を更新します。
+     * @param updateDTO 取引更新情報
+     * @param authentication 認証済みユーザー情報
+     * @param redirectAttributes リダイレクト時の属性
+     * @return リダイレクト先URL
+     */
+    @PostMapping("/transactions/update")
+    public String updateTransaction(
+            @ModelAttribute TransactionUpdateDTO updateDTO,
+            Authentication authentication,
+            RedirectAttributes redirectAttributes) {
+
+        LoginUserDetails userDetails = (LoginUserDetails) authentication.getPrincipal();
+        NkraftUser currentUser = userDetails.getNkraftUser();
+
+        // 各IDから関連エンティティを取得
+        BudgetTransactionType budgetTransactionType = budgetTransactionTypeService.getTransactionTypeById(updateDTO.getBudgetTransactionTypeId());
+        Category category = (updateDTO.getCategoryId() != null) ? categoryService.getCategoryById(updateDTO.getCategoryId()) : null;
+
+        // 取引更新サービスを呼び出し
+        try {
+            transactionService.updateTransaction(
+                    updateDTO.getTransactionId(),
+                    currentUser,
+                    LocalDate.parse(updateDTO.getTransactionDate()),
+                    updateDTO.getPlannedAmount(),
+                    budgetTransactionType,
+                    category,
+                    updateDTO.getMemo()
+            );
+            redirectAttributes.addFlashAttribute("message", "取引を更新しました。");
+        } catch (EntityNotFoundException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "指定された取引が見つかりませんでした。");
+        }
+        return "redirect:/budget/";
+    }
+
+    /**
+     * 取引を完了ステータスに更新します。
+     * このメソッドはAjaxリクエストから呼び出されることを想定しています。
+     * @param transactionId 完了する取引のID
+     * @param actualAmount 実績額 (任意)
+     * @param authentication 認証情報
+     * @return 処理結果を含むJSONレスポンス
+     */
+    @PostMapping("/transactions/complete")
+    @ResponseBody
+    public ResponseEntity<?> completeTransaction(
+            @RequestParam("transactionId") Long transactionId,
+            @RequestParam(value = "actualAmount", required = false) BigDecimal actualAmount,
+            Authentication authentication) {
+
+        LoginUserDetails userDetails = (LoginUserDetails) authentication.getPrincipal();
+        NkraftUser currentUser = userDetails.getNkraftUser();
+
+        try {
+            Transaction completedTransaction = transactionService.completeTransaction(transactionId, actualAmount, currentUser);
+            Account updatedAccount = completedTransaction.getAccount();
+
+            // F-B09: 差額貯金のロジック
+            BigDecimal savingsDifference = BigDecimal.ZERO;
+            // "出金"の場合のみ差額貯金の対象とする
+            if ("出金".equals(completedTransaction.getBudgetTransactionType().getName())) {
+                BigDecimal planned = completedTransaction.getPlannedAmount();
+                BigDecimal actual = completedTransaction.getActualAmount();
+                if (actual.compareTo(planned) < 0) {
+                    savingsDifference = planned.subtract(actual);
+                }
+            }
+
+            Map<String, Object> response = new java.util.HashMap<>();
+            response.put("success", true);
+            response.put("newBalance", updatedAccount.getBalance());
+            response.put("savingsDifference", savingsDifference);
+            return ResponseEntity.ok(response);
+        } catch (EntityNotFoundException | SecurityException | IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("success", false, "message", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("success", false, "message", "サーバーエラーが発生しました。"));
+        }
+    }
+
+    /**
+     * 差額貯金のための振替取引を作成します。
+     * @param transactionId 元の取引ID
+     * @param savingsAccountId 貯金先口座ID
+     * @param differenceAmount 差額
+     * @param authentication 認証情報
+     * @return 処理結果
+     */
+    @PostMapping("/transactions/create-savings-transfer")
+    @ResponseBody
+    public ResponseEntity<?> createSavingsTransfer(
+            @RequestParam("transactionId") Long transactionId,
+            @RequestParam("savingsAccountId") Long savingsAccountId,
+            @RequestParam("differenceAmount") BigDecimal differenceAmount,
+            Authentication authentication) {
+
+        LoginUserDetails userDetails = (LoginUserDetails) authentication.getPrincipal();
+        NkraftUser currentUser = userDetails.getNkraftUser();
+
+        try {
+            Account savingsAccount = accountService.getAccountById(savingsAccountId);
+            BudgetTransactionType transferType = budgetTransactionTypeService.getTransactionTypeByName("振替");
+            BudgetTransactionType depositType = budgetTransactionTypeService.getTransactionTypeByName("入金");
+
+            transactionService.createSavingsTransfer(currentUser, transactionId, savingsAccount, differenceAmount, transferType, depositType);
+            return ResponseEntity.ok(Map.of("success", true, "message", "差額貯金への振替を登録しました。"));
+        } catch (Exception e) {
+            logger.error("Error creating savings transfer", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("success", false, "message", "差額貯金の処理中にエラーが発生しました。"));
+        }
+    }
+
+    /**
+     * 取引を論理削除します。
+     * このメソッドはAjaxリクエストから呼び出されることを想定しています。
+     * @param transactionId 削除する取引のID
+     * @param authentication 認証情報
+     * @return 処理結果を含むJSONレスポンス
+     */
+    @DeleteMapping("/transactions/{transactionId}")
+    @ResponseBody
+    public ResponseEntity<?> deleteTransaction(
+            @PathVariable("transactionId") Long transactionId,
+            Authentication authentication) {
+
+        logger.info("[START] DELETE /transactions/{}", transactionId);
+
+        LoginUserDetails userDetails = (LoginUserDetails) authentication.getPrincipal();
+        NkraftUser currentUser = userDetails.getNkraftUser();
+
+        try {
+            logger.info("Calling transactionService.deleteTransaction for id: {}", transactionId);
+            transactionService.deleteTransaction(transactionId, currentUser);
+            logger.info("Successfully completed transactionService.deleteTransaction for id: {}", transactionId);
+            return ResponseEntity.ok(Map.of("success", true));
+        } catch (EntityNotFoundException | SecurityException e) {
+            logger.warn("Failed to delete transaction {}: {}", transactionId, e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("success", false, "message", e.getMessage()));
+        } catch (Throwable t) {
+            logger.error("An unexpected error occurred while deleting transaction {}", transactionId, t);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("success", false, "message", "An unexpected server error occurred."));
+        }
     }
 }

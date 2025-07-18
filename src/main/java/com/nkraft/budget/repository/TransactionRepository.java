@@ -20,5 +20,5 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
      * @param status 取引ステータス
      * @return 取引のリスト
      */
-    List<Transaction> findByUserAndAccountAndTransactionStatusOrderByTransactionDateAsc(NkraftUser user, Account account, TransactionStatus status);
+    List<Transaction> findByUserAndAccountAndTransactionStatusAndIsDeletedFalseOrderByTransactionDateAsc(NkraftUser user, Account account, TransactionStatus status);
 }
