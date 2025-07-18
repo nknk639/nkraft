@@ -113,8 +113,13 @@ public class TransactionService {
 
         Account sourceAccount = sourceTransaction.getAccount();
         String memo = "差額貯金（" + sourceTransaction.getMemo() + "）";
-        createTransaction(user, sourceAccount, transferType, sourceTransaction.getCategory(), LocalDate.now(), differenceAmount, memo);
-        createTransaction(user, savingsAccount, depositType, sourceTransaction.getCategory(), LocalDate.now(), differenceAmount, memo);
+
+        // 貯金口座の残高を更新
+        savingsAccount.setBalance(savingsAccount.getBalance().add(differenceAmount));
+
+        // 生成する取引は即座に「完了」ステータスにする
+        createCompletedTransaction(user, sourceAccount, transferType, sourceTransaction.getCategory(), LocalDate.now(), differenceAmount, memo);
+        createCompletedTransaction(user, savingsAccount, depositType, sourceTransaction.getCategory(), LocalDate.now(), differenceAmount, memo);
     }
 
     /**
@@ -168,7 +173,9 @@ public class TransactionService {
 
     public List<Transaction> getPlannedTransactionsForAccount(NkraftUser user, Account account) {
         return transactionRepository.findByUserAndAccountAndTransactionStatusAndIsDeletedFalseOrderByTransactionDateAsc(
-                user, account, TransactionStatus.PLANNED);
+                user, account, TransactionStatus.PLANNED).stream()
+                .filter(t -> !"振替".equals(t.getBudgetTransactionType().getName())) // 「振替」取引を除外
+                .collect(java.util.stream.Collectors.toList());
     }
 
     /**
@@ -189,4 +196,22 @@ public class TransactionService {
         ))
         .collect(java.util.stream.Collectors.toList());
   }
+
+    /**
+     * 完了済みの取引を直接作成するためのプライベートヘルパーメソッド。
+     */
+    private Transaction createCompletedTransaction(NkraftUser user, Account account, BudgetTransactionType budgetTransactionType, Category category, LocalDate transactionDate, BigDecimal amount, String memo) {
+        Transaction transaction = new Transaction();
+        transaction.setUser(user);
+        transaction.setAccount(account);
+        transaction.setBudgetTransactionType(budgetTransactionType);
+        transaction.setCategory(category);
+        transaction.setTransactionDate(transactionDate);
+        transaction.setPlannedAmount(amount);
+        transaction.setActualAmount(amount); // 実績額も同額で設定
+        transaction.setTransactionStatus(TransactionStatus.COMPLETED); // ステータスを「完了」に設定
+        transaction.setMemo(memo);
+
+        return transactionRepository.save(transaction);
+    }
 }
