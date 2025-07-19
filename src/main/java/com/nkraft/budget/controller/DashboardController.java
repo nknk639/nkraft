@@ -136,7 +136,7 @@ public class DashboardController {
         Category category = (categoryId != null) ? categoryService.getCategoryById(categoryId) : null;
 
         // 取引登録サービスを呼び出し
-        transactionService.createTransaction(currentUser, account, budgetTransactionType, category, LocalDate.parse(transactionDate), plannedAmount, memo);
+        transactionService.createTransaction(currentUser, account, budgetTransactionType, category, LocalDate.parse(transactionDate), plannedAmount, memo, null);
 
         redirectAttributes.addFlashAttribute("message", "取引を登録しました。");
         return "redirect:/budget/";

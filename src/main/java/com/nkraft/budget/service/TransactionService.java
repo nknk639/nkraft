@@ -120,8 +120,8 @@ public class TransactionService {
         savingsAccount.setBalance(savingsAccount.getBalance().add(differenceAmount));
 
         // 生成する取引は即座に「完了」ステータスにする
-        createCompletedTransaction(user, sourceAccount, transferType, sourceTransaction.getCategory(), LocalDate.now(), differenceAmount, memo);
-        createCompletedTransaction(user, savingsAccount, depositType, sourceTransaction.getCategory(), LocalDate.now(), differenceAmount, memo);
+        createCompletedTransaction(user, sourceAccount, transferType, sourceTransaction.getCategory(), LocalDate.now(), differenceAmount, memo, null);
+        createCompletedTransaction(user, savingsAccount, depositType, sourceTransaction.getCategory(), LocalDate.now(), differenceAmount, memo, null);
     }
 
     /**
@@ -158,7 +158,7 @@ public class TransactionService {
     }
 
     @Transactional
-    public Transaction createTransaction(NkraftUser user, Account account, BudgetTransactionType budgetTransactionType, Category category, LocalDate transactionDate, BigDecimal plannedAmount, String memo) {
+    public Transaction createTransaction(NkraftUser user, Account account, BudgetTransactionType budgetTransactionType, Category category, LocalDate transactionDate, BigDecimal plannedAmount, String memo, RecurringTransaction recurringTransaction) {
         Transaction transaction = new Transaction();
         transaction.setUser(user); // ユーザー
         transaction.setAccount(account); // 口座
@@ -168,6 +168,7 @@ public class TransactionService {
         transaction.setPlannedAmount(plannedAmount); // 予定額
         transaction.setTransactionStatus(TransactionStatus.PLANNED); // 取引ステータス（予定）
         transaction.setMemo(memo); // メモ
+        transaction.setRecurringTransaction(recurringTransaction);
 
         transactionRepository.save(transaction);
         return transaction;
@@ -227,7 +228,7 @@ public class TransactionService {
     /**
      * 完了済みの取引を直接作成するためのプライベートヘルパーメソッド。
      */
-    private Transaction createCompletedTransaction(NkraftUser user, Account account, BudgetTransactionType budgetTransactionType, Category category, LocalDate transactionDate, BigDecimal amount, String memo) {
+    private Transaction createCompletedTransaction(NkraftUser user, Account account, BudgetTransactionType budgetTransactionType, Category category, LocalDate transactionDate, BigDecimal amount, String memo, RecurringTransaction recurringTransaction) {
         Transaction transaction = new Transaction();
         transaction.setUser(user);
         transaction.setAccount(account);
@@ -238,6 +239,7 @@ public class TransactionService {
         transaction.setActualAmount(amount); // 実績額も同額で設定
         transaction.setTransactionStatus(TransactionStatus.COMPLETED); // ステータスを「完了」に設定
         transaction.setMemo(memo);
+        transaction.setRecurringTransaction(recurringTransaction);
 
         return transactionRepository.save(transaction);
     }

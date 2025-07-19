@@ -4,11 +4,14 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 import com.nkraft.budget.entity.Transaction;
 import com.nkraft.budget.entity.Account;
 import com.nkraft.budget.entity.TransactionStatus;
 import com.nkraft.user.entity.NkraftUser;
+import com.nkraft.budget.entity.RecurringTransaction;
+
 
 @Repository
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
@@ -21,4 +24,6 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
      * @return 取引のリスト
      */
     List<Transaction> findByUserAndAccountAndTransactionStatusAndIsDeletedFalseOrderByTransactionDateAsc(NkraftUser user, Account account, TransactionStatus status);
+
+    Optional<Transaction> findTopByRecurringTransactionOrderByTransactionDateDesc(RecurringTransaction recurringTransaction);
 }
