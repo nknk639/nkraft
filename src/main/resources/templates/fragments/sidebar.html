@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!--/* Sidebar Fragment */-->
+<aside th:fragment="sidebar(title)" class="sidebar p-3 flex-shrink-0">
+    <div class="accordion accordion-flush" id="sidebarAccordion">
+        <div class="accordion-item bg-transparent border-0">
+            <h2 class="accordion-header">
+                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseBudget" aria-expanded="true" aria-controls="collapseBudget">予算管理</button>
+            </h2>
+            <div id="collapseBudget" class="accordion-collapse collapse show" data-bs-parent="#sidebarAccordion">
+                <div class="accordion-body p-0 pt-2">
+                    <ul class="nav flex-column">
+                        <li><a th:href="@{/budget/}" class="nav-link" th:classappend="${title == 'ダッシュボード'} ? 'active'">ダッシュボード</a></li>
+                        <li><a th:href="@{/budget/transactions}" class="nav-link" th:classappend="${title == '取引一覧'} ? 'active'">取引一覧</a></li>
+                        <li><a th:href="@{/budget/report}" class="nav-link" th:classappend="${title == '予実レポート'} ? 'active'">予実レポート</a></li>
+                        <li><a th:href="@{/budget/recurring}" class="nav-link" th:classappend="${title == '繰り返し予定'} ? 'active'">繰り返し予定</a></li>
+                        <li><a th:href="@{/budget/borrows}" class="nav-link" th:classappend="${title == '借入管理'} ? 'active'">借入管理</a></li>
+                        <li><a th:href="@{/budget/goals}" class="nav-link" th:classappend="${title == '目標管理'} ? 'active'">目標管理</a></li>
+                        <li><a th:href="@{/budget/management}" class="nav-link" th:classappend="${title == 'マスター管理'} ? 'active'">マスター管理</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</aside>
+
+</body>
+</html>
