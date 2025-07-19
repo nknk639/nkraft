@@ -1,6 +1,7 @@
 package com.nkraft.budget.controller;
 
 import com.nkraft.budget.dto.RecurringTransactionCreateDTO;
+import com.nkraft.budget.dto.RecurringTransactionUpdateDTO;
 import com.nkraft.budget.entity.RecurringTransaction;
 import com.nkraft.budget.service.AccountService;
 import com.nkraft.budget.service.BudgetTransactionTypeService;
@@ -8,9 +9,11 @@ import com.nkraft.budget.service.CategoryService;
 import com.nkraft.budget.service.RecurringTransactionService;
 import com.nkraft.user.entity.NkraftUser;
 import com.nkraft.user.model.LoginUserDetails;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -18,9 +21,13 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.Map;
 import java.util.List;
 
 @Controller
@@ -43,6 +50,9 @@ public class RecurringTransactionController {
         // Data for the list view
         model.addAttribute("weekdays", new String[]{"日", "月", "火", "水", "木", "金", "土"});
         model.addAttribute("recurringTransactions", recurringTransactionService.getRecurringTransactionsForUser(currentUser));
+
+        // Data for JavaScript (Edit Modal)
+        model.addAttribute("recurringTransactionsJs", recurringTransactionService.getRecurringTransactionsForUserAsJsDTO(currentUser));
 
         // Data for the "Create New" modal
         model.addAttribute("accounts", accountService.getAccountsByUserId(userId));
@@ -72,6 +82,7 @@ public class RecurringTransactionController {
 
     @PostMapping("/{id}/execute")
     public String executeRecurringTransaction(@PathVariable Long id,
+                                              @RequestParam(name = "source", defaultValue = "recurring") String source,
                                               Authentication authentication,
                                               RedirectAttributes redirectAttributes) {
         LoginUserDetails userDetails = (LoginUserDetails) authentication.getPrincipal();
@@ -84,6 +95,46 @@ public class RecurringTransactionController {
             logger.error("Error executing recurring transaction with id: " + id, e);
             redirectAttributes.addFlashAttribute("errorMessage", "繰り返し予定の実行中にエラーが発生しました。");
         }
+
+        String redirectUrl = "/budget/recurring"; // デフォルト
+        if ("dashboard".equals(source)) {
+            redirectUrl = "/budget/";
+        }
+        return "redirect:" + redirectUrl;
+    }
+
+    @PostMapping("/update/{id}")
+    public String updateRecurringTransaction(@PathVariable Long id,
+                                             @ModelAttribute RecurringTransactionUpdateDTO updateDTO,
+                                             Authentication authentication,
+                                             RedirectAttributes redirectAttributes) {
+        LoginUserDetails userDetails = (LoginUserDetails) authentication.getPrincipal();
+        NkraftUser currentUser = userDetails.getNkraftUser();
+
+        try {
+            recurringTransactionService.updateRecurringTransaction(id, updateDTO, currentUser);
+            redirectAttributes.addFlashAttribute("message", "繰り返し予定を更新しました。");
+        } catch (Exception e) {
+            logger.error("Error updating recurring transaction with id: " + id, e);
+            redirectAttributes.addFlashAttribute("errorMessage", "更新中にエラーが発生しました。");
+        }
         return "redirect:/budget/recurring";
+    }
+
+    @DeleteMapping("/{id}")
+    @ResponseBody
+    public ResponseEntity<?> deleteRecurringTransaction(@PathVariable Long id,
+                                                        Authentication authentication) {
+        LoginUserDetails userDetails = (LoginUserDetails) authentication.getPrincipal();
+        NkraftUser currentUser = userDetails.getNkraftUser();
+
+        try {
+            recurringTransactionService.deleteRecurringTransaction(id, currentUser);
+            return ResponseEntity.ok(Map.of("success", true));
+        } catch (EntityNotFoundException | SecurityException e) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of("success", false, "message", "サーバーエラーが発生しました。"));
+        }
     }
 }

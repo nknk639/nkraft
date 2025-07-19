@@ -216,7 +216,27 @@
                     <!-- 繰り返し予定 -->
                     <div class="card shadow-sm mb-4">
                         <div class="card-header fw-bold">繰り返し予定</div>
-                        <!-- ... (省略) ... -->
+                        <div class="card-body">
+                            <div th:if="${not #lists.isEmpty(recurringTransactions)}" class="d-flex flex-wrap">
+                                <form th:each="dto : ${recurringTransactions}" th:with="rt=${dto.recurringTransaction}"
+                                      th:action="@{/budget/recurring/{id}/execute(id=${rt.id})}" method="post" class="m-1">
+                                    <input type="hidden" name="source" value="dashboard">
+                                    <button type="submit" class="btn btn-outline-primary text-start d-flex flex-column" title="実行">
+                                        <div style="font-size: 14px;">
+                                            <span th:text="${rt.name}"></span>:
+                                            <span class="fw-bold" th:text="'¥' + ${#numbers.formatDecimal(rt.amount, 0, 'COMMA', 0, 'POINT')}"></span>
+                                        </div>
+                                        <small class="text-muted" style="font-size: 11px;">
+                                            <span th:if="${dto.latestTransactionDate}" th:text="${#temporals.format(dto.latestTransactionDate, 'yyyy/MM/dd')}"></span>
+                                            <span th:unless="${dto.latestTransactionDate}">未実行</span>
+                                        </small>
+                                    </button>
+                                </form>
+                            </div>
+                            <div th:if="${#lists.isEmpty(recurringTransactions)}">
+                                <p class="text-muted text-center mb-0">繰り返し予定はありません。</p>
+                            </div>
+                        </div>
                     </div>
 
                     <div th:if="${transactions != null and not #lists.isEmpty(transactions)}" class="card shadow-sm flex-grow-1">

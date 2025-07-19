@@ -145,6 +145,7 @@
                             <tr th:each="dto : ${recurringTransactions}" th:with="rt=${dto.recurringTransaction}">
                                 <td class="align-middle text-center">
                                     <form th:action="@{/budget/recurring/{id}/execute(id=${rt.id})}" method="post" class="d-inline">
+                                        <input type="hidden" name="source" value="recurring">
                                         <button type="submit" class="btn btn-sm btn-outline-success" title="今すぐ次の予定を作成">
                                             <i class="fas fa-play"></i>
                                         </button>
@@ -160,12 +161,12 @@
                                     <span th:if="${rt.ruleType.name() == '毎週'}" th:text="'毎週' + ${weekdays[rt.dayOfWeek]} + '曜日'">毎週土曜日</span>
                                 </td>
                                 <td class="align-middle">
-                                    <span th:if="${dto.latestTransactionDate}" th:text="${#temporals.format(dto.latestTransactionDate, 'yyyy-MM-dd')}"></span>
+                                    <span th:if="${dto.latestTransactionDate}" th:text="${#temporals.format(dto.latestTransactionDate, 'yyyy/MM/dd')}"></span>
                                     <span th:unless="${dto.latestTransactionDate}" class="text-muted">未実行</span>
                                 </td>
                                 <td class="align-middle">
-                                    <button class="btn btn-sm btn-outline-secondary"><i class="fas fa-edit"></i></button>
-                                    <button class="btn btn-sm btn-outline-danger"><i class="fas fa-trash-alt"></i></button>
+                                    <button class="btn btn-sm btn-outline-secondary edit-btn" data-bs-toggle="modal" data-bs-target="#editRecurringTransactionModal" th:attr="data-index=${dtoStat.index}"><i class="fas fa-edit"></i></button>
+                                    <button class="btn btn-sm btn-outline-danger delete-btn" data-bs-toggle="modal" data-bs-target="#deleteRecurringTransactionModal" th:data-id="${rt.id}"><i class="fas fa-trash-alt"></i></button>
                                 </td>
                             </tr>
                             <tr th:if="${#lists.isEmpty(recurringTransactions)}">
@@ -250,9 +251,100 @@
     </div>
 </div>
 
+<!-- Edit Recurring Transaction Modal -->
+<div class="modal fade" id="editRecurringTransactionModal" tabindex="-1" aria-labelledby="editRecurringTransactionModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editRecurringTransactionModalLabel">繰り返し予定の編集</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="editRecurringTransactionForm" method="post"> <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" /><!-- action is set by JS -->
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="editRecurringName" class="form-label">ルール名</label>
+                        <input type="text" class="form-control" id="editRecurringName" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editRecurringAccount" class="form-label">口座</label>
+                        <select class="form-select" id="editRecurringAccount" name="accountId" required>
+                            <option th:each="acc : ${accounts}" th:value="${acc.accountId}" th:text="${acc.accountName}"></option>
+                        </select>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="editRecurringType" class="form-label">種別</label>
+                            <select class="form-select" id="editRecurringType" name="budgetTransactionTypeId" required>
+                                <option th:each="type : ${transactionTypes}" th:value="${type.id}" th:text="${type.name}"></option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="editRecurringCategory" class="form-label">カテゴリ</label>
+                            <select class="form-select" id="editRecurringCategory" name="categoryId">
+                                <option value="">未分類</option>
+                                <option th:each="cat : ${categories}" th:value="${cat.id}" th:text="${cat.categoryName}"></option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editRecurringAmount" class="form-label">金額</label>
+                        <input type="number" class="form-control" id="editRecurringAmount" name="amount" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editRecurringMemo" class="form-label">メモ</label>
+                        <input type="text" class="form-control" id="editRecurringMemo" name="memo">
+                    </div>
+                    <hr>
+                    <div class="mb-3">
+                        <label for="editRuleType" class="form-label">ルール</label>
+                        <select class="form-select" id="editRuleType" name="ruleType" required>
+                            <option value="毎月">毎月</option>
+                            <option value="毎週">毎週</option>
+                        </select>
+                    </div>
+                    <div id="editDayOfMonthWrapper" class="mb-3">
+                        <label for="editDayOfMonth" class="form-label">日付</label>
+                        <input type="number" class="form-control" id="editDayOfMonth" name="dayOfMonth" min="1" max="31">
+                    </div>
+                    <div id="editDayOfWeekWrapper" class="mb-3" style="display: none;">
+                        <label for="editDayOfWeek" class="form-label">曜日</label>
+                        <select class="form-select" id="editDayOfWeek" name="dayOfWeek">
+                            <option th:each="day,iter : ${weekdays}" th:value="${iter.index}" th:text="${day} + '曜日'"></option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                    <button type="submit" class="btn btn-primary">更新</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteRecurringTransactionModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">繰り返し予定の削除</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">この繰り返し予定を削除しますか？</div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">削除</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script>
+<script th:inline="javascript">
     document.addEventListener('DOMContentLoaded', function() {
+        const recurringTransactionsJs = /*[[${recurringTransactionsJs}]]*/ [];
+
+        // --- Create Modal Logic ---
         const ruleTypeSelect = document.getElementById('ruleType');
         const dayOfMonthWrapper = document.getElementById('dayOfMonthWrapper');
         const dayOfWeekWrapper = document.getElementById('dayOfWeekWrapper');
@@ -263,6 +355,78 @@
             };
             ruleTypeSelect.addEventListener('change', toggleRuleFields);
             toggleRuleFields(); // Initial call
+        }
+
+        // --- Edit Modal Logic ---
+        const editModal = document.getElementById('editRecurringTransactionModal');
+        if (editModal) {
+            const editForm = document.getElementById('editRecurringTransactionForm');
+            const editRuleTypeSelect = document.getElementById('editRuleType');
+            const editDayOfMonthWrapper = document.getElementById('editDayOfMonthWrapper');
+            const editDayOfWeekWrapper = document.getElementById('editDayOfWeekWrapper');
+
+            const toggleEditRuleFields = () => {
+                editDayOfMonthWrapper.style.display = editRuleTypeSelect.value === '毎月' ? 'block' : 'none';
+                editDayOfWeekWrapper.style.display = editRuleTypeSelect.value === '毎週' ? 'block' : 'none';
+            };
+            editRuleTypeSelect.addEventListener('change', toggleEditRuleFields);
+
+            editModal.addEventListener('show.bs.modal', event => {
+                const button = event.relatedTarget;
+                const index = button.getAttribute('data-index');
+                const data = recurringTransactionsJs[index];
+
+                editForm.action = `/budget/recurring/update/${data.id}`;
+                document.getElementById('editRecurringName').value = data.name;
+                document.getElementById('editRecurringAccount').value = data.accountId;
+                document.getElementById('editRecurringType').value = data.budgetTransactionTypeId;
+                document.getElementById('editRecurringCategory').value = data.categoryId || '';
+                document.getElementById('editRecurringAmount').value = data.amount;
+                document.getElementById('editRecurringMemo').value = data.memo || '';
+                document.getElementById('editRuleType').value = data.ruleType;
+                document.getElementById('editDayOfMonth').value = data.dayOfMonth;
+                document.getElementById('editDayOfWeek').value = data.dayOfWeek;
+
+                toggleEditRuleFields();
+            });
+        }
+
+        // --- Delete Modal Logic ---
+        const deleteModal = document.getElementById('deleteRecurringTransactionModal');
+        if (deleteModal) {
+            let transactionIdToDelete = null;
+            const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+
+            deleteModal.addEventListener('show.bs.modal', event => {
+                const button = event.relatedTarget;
+                transactionIdToDelete = button.getAttribute('data-id');
+            });
+
+            confirmDeleteBtn.addEventListener('click', () => {
+                if (!transactionIdToDelete) return;
+
+                const csrfToken = document.querySelector("meta[name='_csrf']").getAttribute("content");
+                const csrfHeader = document.querySelector("meta[name='_csrf_header']").getAttribute("content");
+
+                fetch(`/budget/recurring/${transactionIdToDelete}`, {
+                    method: 'DELETE',
+                    headers: {
+                        [csrfHeader]: csrfToken
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        window.location.reload();
+                    } else {
+                        alert('削除に失敗しました: ' + (data.message || '不明なエラー'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('通信エラーが発生しました。');
+                });
+            });
         }
     });
 </script>

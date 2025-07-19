@@ -4,12 +4,14 @@ import com.nkraft.budget.entity.Account;
 import com.nkraft.budget.entity.BudgetTransactionType;
 import com.nkraft.budget.entity.Transaction;
 import com.nkraft.budget.entity.Category;
+import com.nkraft.budget.dto.RecurringTransactionViewDTO;
 import com.nkraft.budget.dto.TransactionDateUpdateDTO;
 import com.nkraft.budget.dto.TransactionDTO;
 import com.nkraft.budget.service.AccountService;
 import com.nkraft.budget.service.BudgetTransactionTypeService;
 import com.nkraft.budget.service.TransactionService;
 import com.nkraft.budget.service.CategoryService;
+import com.nkraft.budget.service.RecurringTransactionService;
 import com.nkraft.budget.dto.TransactionUpdateDTO; // DTOのインポートを追加
 import com.nkraft.user.entity.NkraftUser;
 import com.nkraft.user.model.LoginUserDetails;
@@ -54,6 +56,7 @@ public class DashboardController {
     private final BudgetTransactionTypeService budgetTransactionTypeService;
     private final CategoryService categoryService;
     private final TransactionService transactionService;
+    private final RecurringTransactionService recurringTransactionService;
 
     private static final Logger logger = LoggerFactory.getLogger(DashboardController.class);
 
@@ -100,6 +103,9 @@ public class DashboardController {
              // メイン口座がない場合は、空のリストを渡す
              model.addAttribute("transactions", Collections.emptyList());
          }
+
+        // 2.6 繰り返し予定リスト
+        model.addAttribute("recurringTransactions", recurringTransactionService.getRecurringTransactionsForUser(currentUser));
 
         return "budget/dashboard"; // "templates/budget/dashboard.html" を表示
     }

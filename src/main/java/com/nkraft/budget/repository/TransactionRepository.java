@@ -25,5 +25,5 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
      */
     List<Transaction> findByUserAndAccountAndTransactionStatusAndIsDeletedFalseOrderByTransactionDateAsc(NkraftUser user, Account account, TransactionStatus status);
 
-    Optional<Transaction> findTopByRecurringTransactionOrderByTransactionDateDesc(RecurringTransaction recurringTransaction);
+    Optional<Transaction> findTopByRecurringTransactionAndIsDeletedFalseOrderByTransactionDateDesc(RecurringTransaction recurringTransaction);
 }
