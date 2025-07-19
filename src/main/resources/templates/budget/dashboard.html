@@ -216,17 +216,17 @@
                     <!-- 繰り返し予定 -->
                     <div class="card shadow-sm mb-4">
                         <div class="card-header fw-bold">繰り返し予定</div>
-                        <div class="card-body">
-                             <!--/* TODO: アコーディオンで繰り返し予定リストを実装 (F-B05) */-->
-                            <p>ここに繰り返し予定のアコーディオンが表示されます。</p>
-                        </div>
+                        <!-- ... (省略) ... -->
                     </div>
 
                     <div th:if="${transactions != null and not #lists.isEmpty(transactions)}" class="card shadow-sm flex-grow-1">
                         <div class="card-header fw-bold d-flex justify-content-between align-items-center">
                             取引予定リスト
-                            <!-- TODO: 取引シミュレーション機能 (F-B02) -->
-                            <!--<button type="button" class="btn btn-sm btn-outline-secondary">シミュレーション</button>-->
+                            <div>
+                                <button type="button" class="btn btn-sm btn-outline-primary" id="startSimBtn">シミュレーション</button>
+                                <button type="button" class="btn btn-sm btn-success d-none" id="saveSimBtn">保存</button>
+                                <button type="button" class="btn btn-sm btn-secondary d-none" id="cancelSimBtn">キャンセル</button>
+                            </div>
                         </div>
                         <div class="card-body p-0">
                             <div style="max-height: 400px; overflow-y: auto;">
@@ -234,6 +234,7 @@
                                 <table class="table table-hover mb-0" id="planned-transactions-table">
                                     <thead>
                                     <tr>
+                                        <th scope="col" class="handle-col" style="width: 4%; display: none;"></th>
                                         <th scope="col" style="width: 12%;">日付</th>
                                         <th scope="col" style="width: 25%;">内容</th>
                                         <th scope="col" class="text-end" style="width: 15%;">予定額</th>
@@ -245,8 +246,9 @@
                                     </thead>
                                     <tbody id="transactions-body">
                                         <!-- iterStatを使用してループのインデックスを取得 -->
-                                        <tr th:each="transaction, iterStat : ${transactions}">
-                                            <td th:text="${#temporals.format(transaction.transactionDate, 'yyyy-MM-dd')}" class="align-middle"></td>
+                                        <tr th:each="transaction, iterStat : ${transactions}" th:data-transaction-id="${transaction.transactionId}">
+                                            <td class="align-middle text-center handle" style="cursor: grab; display: none;"><i class="fas fa-grip-vertical"></i></td>
+                                            <td th:text="${#temporals.format(transaction.transactionDate, 'yyyy-MM-dd')}" class="align-middle transaction-date"></td>
                                             <td class="align-middle">
                                                 <span th:text="${transaction.memo}" class="d-block"></span>
                                                 <small class="text-muted" th:text="${transaction.categoryName} ?: '未分類'"></small>
@@ -423,6 +425,8 @@
 
 <!-- Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<!-- SortableJS for Drag and Drop -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
 <script th:inline="javascript">
@@ -455,21 +459,24 @@
         }
 
         // F-B02, F-B03: フロントエンドでの残高計算ロジック
-        const calculateBalances = () => {
+        const calculateBalances = (transactionsToCalculate) => {
             // ThymeleafからJavaオブジェクトを直接受け取る
             const initialBalance = /*[[${mainAccountBalance}]]*/ 0;
-            const transactions = /*[[${transactions}]]*/ [];
             
-            if (!transactions || transactions.length === 0) {
+            if (!transactionsToCalculate || transactionsToCalculate.length === 0) {
                 return;
             }
 
             let currentBalance = initialBalance;
 
             const rows = document.querySelectorAll('#transactions-body tr');
+            if (rows.length !== transactionsToCalculate.length) {
+                console.error("DOM-JS Mismatch: The number of rows in the DOM does not match the number of transactions in the JavaScript array.");
+                return;
+            }
 
             rows.forEach((row, index) => {
-                const transaction = transactions[index];
+                const transaction = transactionsToCalculate[index];
                 const amount = transaction.plannedAmount;                
                 const type = transaction.budgetTransactionTypeName;
 
@@ -489,13 +496,19 @@
                         balanceCell.classList.remove('text-danger');
                     }
                 }
+                // 日付も更新
+                const dateCell = row.querySelector('.transaction-date');
+                if (dateCell) {
+                    dateCell.textContent = transaction.transactionDate;
+                }
             });
         };
 
         // ページ読み込み時に初回計算を実行
-        calculateBalances();
+        const initialTransactions = /*[[${transactions}]]*/ [];
+        calculateBalances(initialTransactions);
 
-        // TODO: 実績額の変更やトグルの操作時に再計算するイベントリスナーをここに追加
+        // --- イベントリスナー設定 ---
 
         // F-B03: Edit transaction modal logic
         const editTransactionModal = document.getElementById('editTransactionModal');
@@ -653,6 +666,82 @@
                 console.error('Error:', error);
                 alert('通信エラーが発生しました。');
             });
+        });
+
+        // F-B02: Simulation Logic
+        const startSimBtn = document.getElementById('startSimBtn');
+        const saveSimBtn = document.getElementById('saveSimBtn');
+        const cancelSimBtn = document.getElementById('cancelSimBtn');
+        const transactionsBody = document.getElementById('transactions-body');
+        const table = document.getElementById('planned-transactions-table');
+        let sortable = null;
+        let transactionsForSim = []; // シミュレーション用のデータ配列
+
+        if (transactionsBody) {
+            sortable = new Sortable(transactionsBody, {
+                handle: '.handle', // ドラッグハンドルのクラス名
+                animation: 150,
+                disabled: true, // 初期状態では無効
+                onEnd: function (evt) {
+                    // データ配列をDOMの新しい順序に合わせる
+                    const movedItem = transactionsForSim.splice(evt.oldIndex, 1)[0];
+                    transactionsForSim.splice(evt.newIndex, 0, movedItem);
+
+                    // 移動したアイテムの日付を、移動先の前のアイテムの日付に合わせる
+                    // これにより、ユーザーは同じ日に支払いをまとめるシミュレーションができる
+                    const newDate = (evt.newIndex > 0)
+                        ? transactionsForSim[evt.newIndex - 1].transactionDate
+                        : (transactionsForSim.length > 1 ? transactionsForSim[1].transactionDate : transactionsForSim[0].transactionDate);
+
+                    transactionsForSim[evt.newIndex].transactionDate = newDate;
+
+                    // 更新されたデータ配列で残高と日付表示を再計算
+                    calculateBalances(transactionsForSim);
+                }
+            });
+        }
+
+        startSimBtn.addEventListener('click', () => {
+            // シミュレーション開始時に元のデータをディープコピー
+            transactionsForSim = JSON.parse(JSON.stringify(initialTransactions));
+
+            sortable.option('disabled', false); // ドラッグ＆ドロップを有効化
+            startSimBtn.classList.add('d-none');
+            saveSimBtn.classList.remove('d-none');
+            cancelSimBtn.classList.remove('d-none');
+            table.classList.add('table-info'); // シミュレーション中であることを視覚的に示す
+            document.querySelectorAll('.handle, .handle-col').forEach(el => el.style.display = 'table-cell');
+        });
+
+        cancelSimBtn.addEventListener('click', () => {
+            window.location.reload(); // 最も簡単なキャンセル方法はリロード
+        });
+
+        saveSimBtn.addEventListener('click', () => {
+            const updates = transactionsForSim.map(t => ({
+                transactionId: t.transactionId,
+                newDate: t.transactionDate
+            }));
+
+            const csrfToken = document.querySelector("meta[name='_csrf']").getAttribute("content");
+            const csrfHeader = document.querySelector("meta[name='_csrf_header']").getAttribute("content");
+
+            fetch('/budget/transactions/update-dates', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    [csrfHeader]: csrfToken
+                },
+                body: JSON.stringify(updates)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    alert('保存に失敗しました: ' + (data.message || '不明なエラーが発生しました。'));
+                }
+            }).catch(error => console.error('Error saving transaction dates:', error));
         });
 
         // Delete transaction logic

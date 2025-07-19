@@ -2,10 +2,12 @@ package com.nkraft.budget.service;
 
 import com.nkraft.budget.dto.TransactionDTO;
 import com.nkraft.budget.entity.*;
+import com.nkraft.budget.dto.TransactionDateUpdateDTO;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import jakarta.persistence.EntityNotFoundException;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -196,6 +198,31 @@ public class TransactionService {
         ))
         .collect(java.util.stream.Collectors.toList());
   }
+
+    /**
+     * 複数の取引の日付を一括で更新します。
+     *
+     * @param dtoList 取引IDと新しい日付のペアのリスト
+     * @param user 現在のユーザー
+     */
+    @Transactional
+    public void updateTransactionDates(List<TransactionDateUpdateDTO> dtoList, NkraftUser user) {
+        Map<Long, LocalDate> dateMap = dtoList.stream()
+                .collect(java.util.stream.Collectors.toMap(TransactionDateUpdateDTO::getTransactionId, TransactionDateUpdateDTO::getNewDate));
+
+        List<Long> ids = dtoList.stream().map(TransactionDateUpdateDTO::getTransactionId).collect(java.util.stream.Collectors.toList());
+        List<Transaction> transactionsToUpdate = transactionRepository.findAllById(ids);
+
+        for (Transaction transaction : transactionsToUpdate) {
+            if (!transaction.getUser().getId().equals(user.getId())) {
+                throw new SecurityException("User " + user.getId() + " does not have permission to update transaction " + transaction.getId());
+            }
+            LocalDate newDate = dateMap.get(transaction.getId());
+            if (newDate != null) {
+                transaction.setTransactionDate(newDate);
+            }
+        }
+    }
 
     /**
      * 完了済みの取引を直接作成するためのプライベートヘルパーメソッド。

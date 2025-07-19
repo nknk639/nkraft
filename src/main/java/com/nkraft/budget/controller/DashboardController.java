@@ -4,6 +4,7 @@ import com.nkraft.budget.entity.Account;
 import com.nkraft.budget.entity.BudgetTransactionType;
 import com.nkraft.budget.entity.Transaction;
 import com.nkraft.budget.entity.Category;
+import com.nkraft.budget.dto.TransactionDateUpdateDTO;
 import com.nkraft.budget.dto.TransactionDTO;
 import com.nkraft.budget.service.AccountService;
 import com.nkraft.budget.service.BudgetTransactionTypeService;
@@ -26,6 +27,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute; // ModelAttributeのインポートを追加
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -284,6 +286,29 @@ public class DashboardController {
         } catch (Throwable t) {
             logger.error("An unexpected error occurred while deleting transaction {}", transactionId, t);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("success", false, "message", "An unexpected server error occurred."));
+        }
+    }
+
+    /**
+     * シミュレーションによって変更された取引の日付を一括で更新します。
+     * @param dtoList 取引IDと新しい日付のペアのリスト
+     * @param authentication 認証情報
+     * @return 処理結果
+     */
+    @PostMapping("/transactions/update-dates")
+    @ResponseBody
+    public ResponseEntity<?> updateTransactionDates(
+            @RequestBody List<TransactionDateUpdateDTO> dtoList,
+            Authentication authentication) {
+
+        LoginUserDetails userDetails = (LoginUserDetails) authentication.getPrincipal();
+        NkraftUser currentUser = userDetails.getNkraftUser();
+        try {
+            transactionService.updateTransactionDates(dtoList, currentUser);
+            return ResponseEntity.ok(Map.of("success", true));
+        } catch (Exception e) {
+            logger.error("Error updating transaction dates", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("success", false, "message", "日付の更新中にエラーが発生しました。"));
         }
     }
 }
