@@ -76,4 +76,7 @@ public class RecurringTransaction {
 
     @Column(name = "day_of_week")
     private Integer dayOfWeek;
+
+    @Column(name = "is_deleted")
+    private Boolean isDeleted = false;
 }
