@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/app :: layout(
+        title='予実レポート',
+        breadcrumbs=~{::breadcrumbs},
+        content=~{::content},
+        modals=~{::modals},
+        scripts=~{::scripts}
+      )}">
+
+<!-- Breadcrumbs Fragment -->
+<nav th:fragment="breadcrumbs" aria-label="breadcrumb">
+    <ol class="breadcrumb mb-0">
+        <li class="breadcrumb-item"><a th:href="@{/budget/}">予算管理</a></li>
+        <li class="breadcrumb-item active" aria-current="page">予実レポート</li>
+    </ol>
+</nav>
+
+<!-- Content Fragment -->
+<div th:fragment="content">
+    <!-- 1. 年月ナビゲーションエリア -->
+    <div class="d-flex justify-content-center align-items-center mb-4">
+        <a th:href="@{/budget/report(target=${reportData.prevMonth})}"
+           class="btn btn-outline-secondary"
+           th:classappend="${reportData.isOldestMonth} ? 'disabled' : ''">
+            <i class="fas fa-chevron-left"></i>
+        </a>
+        <h2 class="mx-4 my-0" th:text="${#temporals.format(reportData.targetMonth, 'yyyy年 MM月')}"></h2>
+        <a th:href="@{/budget/report(target=${reportData.nextMonth})}" class="btn btn-outline-secondary">
+            <i class="fas fa-chevron-right"></i>
+        </a>
+    </div>
+
+    <div th:if="${#lists.isEmpty(reportData.transactions)}">
+        <div class="alert alert-info text-center" role="alert">
+            表示するデータがありません。
+        </div>
+    </div>
+
+    <div th:unless="${#lists.isEmpty(reportData.transactions)}">
+        <!-- 2. サマリーエリア -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-4">
+                <div class="card text-center shadow-sm">
+                    <div class="card-header">総予算</div>
+                    <div class="card-body">
+                        <p class="card-text fs-4 fw-bold" th:text="'¥' + ${#numbers.formatDecimal(reportData.totalPlanned, 0, 'COMMA', 0, 'POINT')}"></p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-center shadow-sm">
+                    <div class="card-header">総実績</div>
+                    <div class="card-body">
+                        <p class="card-text fs-4 fw-bold" th:text="'¥' + ${#numbers.formatDecimal(reportData.totalActual, 0, 'COMMA', 0, 'POINT')}"></p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-center shadow-sm">
+                    <div class="card-header">差額</div>
+                    <div class="card-body">
+                        <p class="card-text fs-4 fw-bold"
+                           th:text="'¥' + ${#numbers.formatDecimal(reportData.totalDifference, 0, 'COMMA', 0, 'POINT')}"
+                           th:classappend="${reportData.totalDifference.compareTo(T(java.math.BigDecimal).ZERO) >= 0} ? 'text-success' : 'text-danger'"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. グラフエリア -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header fw-bold">カテゴリ別 予実グラフ</div>
+            <div class="card-body">
+                <canvas id="reportChart" height="100"></canvas>
+            </div>
+        </div>
+
+        <!-- 4. 取引明細エリア -->
+        <div class="card shadow-sm">
+            <div class="card-header fw-bold">取引明細</div>
+            <div class="card-body">
+                <table class="table table-hover" id="report-transactions-table">
+                    <thead>
+                        <tr>
+                            <th>日付</th>
+                            <th>カテゴリ</th>
+                            <th>メモ</th>
+                            <th class="text-end">金額</th>
+                            <th class="text-center">ステータス</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="tx : ${reportData.transactions}" th:data-category="${tx.category?.categoryName} ?: '未分類'">
+                            <td th:text="${#temporals.format(tx.transactionDate, 'yyyy/MM/dd')}"></td>
+                            <td th:text="${tx.category?.categoryName} ?: '未分類'"></td>
+                            <td th:text="${tx.memo}"></td>
+                            <td class="text-end" th:text="'¥' + ${#numbers.formatDecimal(tx.transactionStatus.name() == 'COMPLETED' ? tx.actualAmount : tx.plannedAmount, 0, 'COMMA', 0, 'POINT')}"></td>
+                            <td class="text-center">
+                                <span class="badge" th:text="${tx.transactionStatus.dbValue}"
+                                      th:classappend="${tx.transactionStatus.name() == 'COMPLETED'} ? 'bg-success' : 'bg-secondary'"></span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modals Fragment -->
+<div th:fragment="modals"></div>
+
+<!-- Scripts Fragment -->
+<th:block th:fragment="scripts">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+    <script th:inline="javascript">
+        document.addEventListener('DOMContentLoaded', function () {
+            // ThymeleafからJavaScriptへデータを渡す
+            // reportDataオブジェクト全体を渡すと、JPAエンティティの循環参照などで
+            // JSONシリアライズに失敗する可能性があるため、必要なデータのみを個別に渡す。
+            const categoryReports = /*[[${reportData.categoryReports}]]*/ [];
+            const transactionsIsEmpty = /*[[${#lists.isEmpty(reportData.transactions)}]]*/ true;
+
+            if (transactionsIsEmpty) {
+                return; // データがなければ何もしない
+            }
+
+            const ctx = document.getElementById('reportChart');
+            if (!ctx) return;
+
+            const categories = categoryReports.map(r => r.categoryName);
+            const plannedData = categoryReports.map(r => r.totalPlanned);
+            const actualData = categoryReports.map(r => r.totalActual);
+
+            let activeCategory = null;
+
+            const chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: categories,
+                    datasets: [
+                        {
+                            label: '予算',
+                            data: plannedData,
+                            backgroundColor: 'rgba(135, 206, 235, 0.6)', // --bs-secondary with alpha
+                            borderColor: 'rgba(135, 206, 235, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: '実績',
+                            data: actualData,
+                            backgroundColor: 'rgba(0, 31, 63, 0.6)', // --bs-primary with alpha
+                            borderColor: 'rgba(0, 31, 63, 1)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function (value) { return '¥' + value.toLocaleString(); }
+                            }
+                        }
+                    },
+                    onClick: (event, elements) => {
+                        if (elements.length > 0) {
+                            const clickedIndex = elements[0].index;
+                            const clickedCategory = categories[clickedIndex];
+
+                            if (activeCategory === clickedCategory) {
+                                // 同じカテゴリが再度クリックされたらフィルター解除
+                                activeCategory = null;
+                                filterTransactions(null);
+                                highlightCategoryInChart(null);
+                            } else {
+                                // 新しいカテゴリがクリックされたらフィルター適用
+                                activeCategory = clickedCategory;
+                                filterTransactions(clickedCategory);
+                                highlightCategoryInChart(clickedCategory);
+                            }
+                        }
+                    }
+                }
+            });
+
+            function filterTransactions(categoryName) {
+                const tableRows = document.querySelectorAll('#report-transactions-table tbody tr');
+                tableRows.forEach(row => {
+                    if (categoryName === null || row.dataset.category === categoryName) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+            }
+
+            function highlightCategoryInChart(categoryName) {
+                chart.data.datasets.forEach(dataset => {
+                    dataset.backgroundColor = dataset.data.map((value, index) => {
+                        const currentCategory = chart.data.labels[index];
+                        const isTarget = categoryName === null || currentCategory === categoryName;
+                        const baseColor = dataset.label === '予算' ? '135, 206, 235' : '0, 31, 63';
+                        const alpha = isTarget ? '0.8' : '0.2';
+                        return `rgba(${baseColor}, ${alpha})`;
+                    });
+                });
+                chart.update();
+            }
+        });
+    </script>
+</th:block>
+</html>
