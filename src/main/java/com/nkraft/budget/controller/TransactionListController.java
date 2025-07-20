@@ -83,7 +83,7 @@ public class TransactionListController {
                     updateDTO.getTransactionId(), currentUser, LocalDate.parse(updateDTO.getTransactionDate()),
                     updateDTO.getPlannedAmount(), budgetTransactionType, category, updateDTO.getMemo());
             redirectAttributes.addFlashAttribute("message", "取引を更新しました。");
-        } catch (EntityNotFoundException | SecurityException e) {
+        } catch (EntityNotFoundException | SecurityException | IllegalStateException e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
 

@@ -174,6 +174,16 @@ class TransactionServiceTest {
     }
 
     @Test
+    @DisplayName("完了済みの取引を更新しようとした場合、IllegalStateExceptionがスローされること")
+    void updateTransaction_Completed_ShouldThrowException() {
+        plannedWithdrawal.setTransactionStatus(TransactionStatus.COMPLETED);
+        when(transactionRepository.findById(1L)).thenReturn(Optional.of(plannedWithdrawal));
+
+        assertThrows(IllegalStateException.class, () ->
+                transactionService.updateTransaction(1L, user, LocalDate.now(), BigDecimal.ONE, withdrawalType, null, "memo"));
+    }
+
+    @Test
     @DisplayName("取引を正常に論理削除できること")
     void deleteTransaction_Success() {
         when(transactionRepository.findById(1L)).thenReturn(Optional.of(plannedWithdrawal));
@@ -192,6 +202,16 @@ class TransactionServiceTest {
         when(transactionRepository.findById(1L)).thenReturn(Optional.of(plannedWithdrawal));
 
         assertThrows(SecurityException.class, () -> transactionService.deleteTransaction(1L, anotherUser));
+        verify(transactionRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("完了済みの取引を削除しようとした場合、IllegalStateExceptionがスローされること")
+    void deleteTransaction_Completed_ShouldThrowException() {
+        plannedWithdrawal.setTransactionStatus(TransactionStatus.COMPLETED);
+        when(transactionRepository.findById(1L)).thenReturn(Optional.of(plannedWithdrawal));
+
+        assertThrows(IllegalStateException.class, () -> transactionService.deleteTransaction(1L, user));
         verify(transactionRepository, never()).save(any());
     }
 

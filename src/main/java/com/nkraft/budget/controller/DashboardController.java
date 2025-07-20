@@ -241,7 +241,7 @@ public class DashboardController {
             transactionService.deleteTransaction(transactionId, currentUser);
             logger.info("Successfully completed transactionService.deleteTransaction for id: {}", transactionId);
             return ResponseEntity.ok(Map.of("success", true));
-        } catch (EntityNotFoundException | SecurityException e) {
+        } catch (EntityNotFoundException | SecurityException | IllegalStateException e) {
             logger.warn("Failed to delete transaction {}: {}", transactionId, e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("success", false, "message", e.getMessage()));
         } catch (Throwable t) {

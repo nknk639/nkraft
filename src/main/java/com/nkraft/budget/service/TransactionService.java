@@ -86,6 +86,16 @@ public class TransactionService {
         Transaction transaction = transactionRepository.findById(transactionId)
                 .orElseThrow(() -> new EntityNotFoundException("Transaction not found with id: " + transactionId));
 
+        // ユーザーが取引の所有者であるか確認（セキュリティ）
+        if (!transaction.getUser().getId().equals(user.getId())) {
+            throw new SecurityException("You do not have permission to update this transaction.");
+        }
+
+        // 完了済みの取引は編集不可
+        if (transaction.getTransactionStatus() == TransactionStatus.COMPLETED) {
+            throw new IllegalStateException("完了済みの取引は編集できません。");
+        }
+
         // 更新可能なフィールドをセット
         transaction.setTransactionDate(transactionDate);
         transaction.setPlannedAmount(plannedAmount);
@@ -93,10 +103,6 @@ public class TransactionService {
         transaction.setCategory(category);
         transaction.setMemo(memo);
 
-        // ユーザーが取引の所有者であるか確認（セキュリティ）
-        if (!transaction.getUser().getId().equals(user.getId())) {
-            throw new SecurityException("You do not have permission to update this transaction.");
-        }
         transactionRepository.save(transaction);
     }
 
@@ -189,6 +195,11 @@ public class TransactionService {
             throw new SecurityException("You do not have permission to delete this transaction.");
         }
         logger.info("Step 2 SUCCESS: Ownership check passed for transaction id: {}", transactionId);
+
+        // 完了済みの取引は削除不可
+        if (transaction.getTransactionStatus() == TransactionStatus.COMPLETED) {
+            throw new IllegalStateException("完了済みの取引は削除できません。");
+        }
 
         transaction.setIsDeleted(true);
         logger.info("Step 3: Set isDeleted=true for transaction id: {}", transactionId);

@@ -226,6 +226,20 @@ class DashboardControllerTest {
     }
 
     @Test
+    void deleteTransaction_whenTransactionIsCompleted_shouldReturnBadRequest() throws Exception {
+        // Given
+        doThrow(new IllegalStateException("完了済みの取引は削除できません。")).when(transactionService).deleteTransaction(anyLong(), any(NkraftUser.class));
+
+        // When & Then
+        mockMvc.perform(delete("/budget/transactions/{transactionId}", 1L)
+                        .with(csrf())
+                        .with(user(testUserDetails)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("完了済みの取引は削除できません。"));
+    }
+
+    @Test
     void updateTransactionDates_shouldReturnSuccessJson() throws Exception {
         // Given
         TransactionDateUpdateDTO dto = new TransactionDateUpdateDTO();
