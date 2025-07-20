@@ -7,16 +7,12 @@ import com.nkraft.budget.entity.Category;
 import com.nkraft.budget.dto.RecurringTransactionViewDTO;
 import com.nkraft.budget.dto.TransactionDateUpdateDTO;
 import com.nkraft.budget.dto.TransactionDTO;
-import com.nkraft.budget.service.AccountService;
-import com.nkraft.budget.service.BudgetTransactionTypeService;
-import com.nkraft.budget.service.TransactionService;
-import com.nkraft.budget.service.CategoryService;
-import com.nkraft.budget.service.RecurringTransactionService;
-import com.nkraft.budget.dto.TransactionUpdateDTO; // DTOのインポートを追加
+import com.nkraft.budget.service.*;
 import com.nkraft.user.entity.NkraftUser;
 import com.nkraft.user.model.LoginUserDetails;
 
 import jakarta.persistence.EntityNotFoundException;
+import java.math.BigDecimal;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -26,8 +22,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute; // ModelAttributeのインポートを追加
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -35,8 +30,6 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-import java.math.BigDecimal;
-import org.springframework.web.bind.annotation.PathVariable;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Collections;
@@ -148,44 +141,6 @@ public class DashboardController {
         return "redirect:/budget/";
     }
     
-    /**
-     * 取引編集フォームから送信されたデータを処理し、取引を更新します。
-     * @param updateDTO 取引更新情報
-     * @param authentication 認証済みユーザー情報
-     * @param redirectAttributes リダイレクト時の属性
-     * @return リダイレクト先URL
-     */
-    @PostMapping("/transactions/update")
-    public String updateTransaction(
-            @ModelAttribute TransactionUpdateDTO updateDTO,
-            Authentication authentication,
-            RedirectAttributes redirectAttributes) {
-
-        LoginUserDetails userDetails = (LoginUserDetails) authentication.getPrincipal();
-        NkraftUser currentUser = userDetails.getNkraftUser();
-
-        // 各IDから関連エンティティを取得
-        BudgetTransactionType budgetTransactionType = budgetTransactionTypeService.getTransactionTypeById(updateDTO.getBudgetTransactionTypeId());
-        Category category = (updateDTO.getCategoryId() != null) ? categoryService.getCategoryById(updateDTO.getCategoryId()) : null;
-
-        // 取引更新サービスを呼び出し
-        try {
-            transactionService.updateTransaction(
-                    updateDTO.getTransactionId(),
-                    currentUser,
-                    LocalDate.parse(updateDTO.getTransactionDate()),
-                    updateDTO.getPlannedAmount(),
-                    budgetTransactionType,
-                    category,
-                    updateDTO.getMemo()
-            );
-            redirectAttributes.addFlashAttribute("message", "取引を更新しました。");
-        } catch (EntityNotFoundException e) {
-            redirectAttributes.addFlashAttribute("errorMessage", "指定された取引が見つかりませんでした。");
-        }
-        return "redirect:/budget/";
-    }
-
     /**
      * 取引を完了ステータスに更新します。
      * このメソッドはAjaxリクエストから呼び出されることを想定しています。

@@ -1,5 +1,6 @@
 package com.nkraft.budget.repository;
 
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -14,7 +15,7 @@ import com.nkraft.budget.entity.RecurringTransaction;
 
 
 @Repository
-public interface TransactionRepository extends JpaRepository<Transaction, Long> {
+public interface TransactionRepository extends JpaRepository<Transaction, Long>, JpaSpecificationExecutor<Transaction> {
 
     /**
      * 指定されたユーザー、口座、および取引ステータスに一致する取引を、取引日の昇順で検索します。

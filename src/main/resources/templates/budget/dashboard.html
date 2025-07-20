@@ -271,9 +271,9 @@
                 <h5 class="modal-title" id="editTransactionModalLabel">取引を編集</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <!-- TODO: /budget/transactions/update エンドポイントをControllerに実装する必要がある -->
             <form id="editTransactionForm" th:action="@{/budget/transactions/update}" method="post">
                 <div class="modal-body">
+                    <input type="hidden" name="redirectUrl" value="/budget/">
                     <input type="hidden" id="editTransactionId" name="transactionId">
 
                     <div class="mb-3">

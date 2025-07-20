@@ -1,15 +1,21 @@
 package com.nkraft.budget.service;
 
 import com.nkraft.budget.dto.TransactionDTO;
+import com.nkraft.budget.dto.TransactionSearchForm;
 import com.nkraft.budget.entity.*;
 import com.nkraft.budget.dto.TransactionDateUpdateDTO;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.persistence.criteria.Predicate;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +33,40 @@ public class TransactionService {
     private final TransactionRepository transactionRepository;
 
     private static final Logger logger = LoggerFactory.getLogger(TransactionService.class);
+
+    @Transactional(readOnly = true)
+    public Page<Transaction> searchTransactions(TransactionSearchForm form, NkraftUser user, Pageable pageable) {
+        return transactionRepository.findAll(getSpecification(form, user), pageable);
+    }
+
+    private Specification<Transaction> getSpecification(TransactionSearchForm form, NkraftUser user) {
+        return (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            predicates.add(cb.equal(root.get("user"), user));
+            predicates.add(cb.isFalse(root.get("isDeleted")));
+
+            if (form.getKeyword() != null && !form.getKeyword().isBlank()) {
+                predicates.add(cb.like(root.get("memo"), "%" + form.getKeyword() + "%"));
+            }
+            if (form.getStartDate() != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("transactionDate"), form.getStartDate()));
+            }
+            if (form.getEndDate() != null) {
+                predicates.add(cb.lessThanOrEqualTo(root.get("transactionDate"), form.getEndDate()));
+            }
+            if (form.getAccountIds() != null && !form.getAccountIds().isEmpty()) {
+                predicates.add(root.get("account").get("accountId").in(form.getAccountIds()));
+            }
+            if (form.getCategoryIds() != null && !form.getCategoryIds().isEmpty()) {
+                predicates.add(root.get("category").get("id").in(form.getCategoryIds()));
+            }
+            if (form.getStatuses() != null && !form.getStatuses().isEmpty()) {
+                predicates.add(root.get("transactionStatus").in(form.getStatuses()));
+            }
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+    }
 
     /**
      * 取引を更新します。
