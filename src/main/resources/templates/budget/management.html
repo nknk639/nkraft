@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/app :: layout(
+        title='マスター管理',
+        breadcrumbs=~{::breadcrumbs},
+        content=~{::content},
+        modals=~{::modals},
+        scripts=~{::scripts}
+      )}">
+
+<!-- Breadcrumbs Fragment -->
+<nav th:fragment="breadcrumbs" aria-label="breadcrumb">
+    <ol class="breadcrumb mb-0">
+        <li class="breadcrumb-item"><a th:href="@{/budget/}">予算管理</a></li>
+        <li class="breadcrumb-item active" aria-current="page">マスター管理</li>
+    </ol>
+</nav>
+
+<!-- Content Fragment -->
+<div th:fragment="content">
+    <!-- Accounts Section -->
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <h4 class="mb-0">口座管理</h4>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newAccountModal">
+            <i class="fas fa-plus me-1"></i> 新規口座を登録
+        </button>
+    </div>
+    <div class="card shadow-sm mb-5">
+        <div class="card-body">
+            <table class="table table-hover">
+                <thead>
+                <tr>
+                    <th>口座名</th>
+                    <th class="text-end">残高</th>
+                    <th class="text-center">メイン</th>
+                    <th class="text-center">貯金用</th>
+                    <th class="text-center">操作</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="acc : ${accounts}">
+                    <td class="align-middle" th:text="${acc.accountName}"></td>
+                    <td class="align-middle text-end" th:text="'¥' + ${#numbers.formatDecimal(acc.balance, 0, 'COMMA', 0, 'POINT')}"></td>
+                    <td class="align-middle text-center">
+                        <i class="fas fa-check text-success" th:if="${acc.isMain}"></i>
+                    </td>
+                    <td class="align-middle text-center">
+                        <i class="fas fa-check text-success" th:if="${acc.isSavings}"></i>
+                    </td>
+                    <td class="align-middle text-center">
+                        <button class="btn btn-sm btn-outline-secondary edit-account-btn"
+                                data-bs-toggle="modal" data-bs-target="#editAccountModal"
+                                th:data-id="${acc.accountId}"
+                                th:data-name="${acc.accountName}"
+                                th:data-is-main="${acc.isMain}"
+                                th:data-is-savings="${acc.isSavings}">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger delete-btn"
+                                data-bs-toggle="modal" data-bs-target="#deleteConfirmModal"
+                                th:data-id="${acc.accountId}"
+                                th:data-name="${acc.accountName}"
+                                th:data-type="'account'">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Categories Section -->
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <h4 class="mb-0">カテゴリ管理</h4>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newCategoryModal">
+            <i class="fas fa-plus me-1"></i> 新規カテゴリを登録
+        </button>
+    </div>
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <table class="table table-hover">
+                <thead>
+                <tr>
+                    <th>カテゴリ名</th>
+                    <th class="text-center">操作</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="cat : ${categories}">
+                    <td class="align-middle" th:text="${cat.categoryName}"></td>
+                    <td class="align-middle text-center">
+                        <button class="btn btn-sm btn-outline-secondary edit-category-btn"
+                                data-bs-toggle="modal" data-bs-target="#editCategoryModal"
+                                th:data-id="${cat.id}"
+                                th:data-name="${cat.categoryName}">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger delete-btn"
+                                data-bs-toggle="modal" data-bs-target="#deleteConfirmModal"
+                                th:data-id="${cat.id}"
+                                th:data-name="${cat.categoryName}"
+                                th:data-type="'category'">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modals Fragment -->
+<div th:fragment="modals">
+    <!-- New Account Modal -->
+    <div class="modal fade" id="newAccountModal" tabindex="-1" aria-labelledby="newAccountModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="newAccountModalLabel">新規口座の登録</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form th:action="@{/budget/management/accounts/create}" method="post" th:object="${accountCreateDTO}">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="accountName" class="form-label">口座名</label>
+                            <input type="text" class="form-control" id="accountName" th:field="*{accountName}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="initialBalance" class="form-label">初期残高</label>
+                            <div class="input-group">
+                                <span class="input-group-text">¥</span>
+                                <input type="number" class="form-control" id="initialBalance" th:field="*{initialBalance}" required>
+                            </div>
+                        </div>
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input" type="checkbox" role="switch" id="isMain" th:field="*{main}">
+                            <label class="form-check-label" for="isMain">メイン口座として設定</label>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" role="switch" id="isSavings" th:field="*{savings}">
+                            <label class="form-check-label" for="isSavings">貯金用口座として設定</label>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                        <button type="submit" class="btn btn-primary">登録</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Account Modal -->
+    <div class="modal fade" id="editAccountModal" tabindex="-1" aria-labelledby="editAccountModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editAccountModalLabel">口座の編集</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="editAccountForm" method="post" th:object="${accountUpdateDTO}">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="editAccountName" class="form-label">口座名</label>
+                            <input type="text" class="form-control" id="editAccountName" th:field="*{accountName}" required>
+                        </div>
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input" type="checkbox" role="switch" id="editIsMain" th:field="*{main}">
+                            <label class="form-check-label" for="editIsMain">メイン口座として設定</label>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" role="switch" id="editIsSavings" th:field="*{savings}">
+                            <label class="form-check-label" for="editIsSavings">貯金用口座として設定</label>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                        <button type="submit" class="btn btn-primary">更新</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Category Modal -->
+    <div class="modal fade" id="newCategoryModal" tabindex="-1" aria-labelledby="newCategoryModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="newCategoryModalLabel">新規カテゴリの登録</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form th:action="@{/budget/management/categories/create}" method="post" th:object="${categoryCreateDTO}">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="categoryName" class="form-label">カテゴリ名</label>
+                            <input type="text" class="form-control" id="categoryName" th:field="*{categoryName}" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                        <button type="submit" class="btn btn-primary">登録</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Category Modal -->
+    <div class="modal fade" id="editCategoryModal" tabindex="-1" aria-labelledby="editCategoryModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editCategoryModalLabel">カテゴリの編集</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="editCategoryForm" method="post" th:object="${categoryUpdateDTO}">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="editCategoryName" class="form-label">カテゴリ名</label>
+                            <input type="text" class="form-control" id="editCategoryName" th:field="*{categoryName}" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                        <button type="submit" class="btn btn-primary">更新</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-labelledby="deleteConfirmModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteConfirmModalLabel">削除の確認</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="deleteConfirmMessage"></p>
+                </div>
+                <div class="modal-footer">
+                    <form id="deleteForm" method="post">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                        <button type="submit" class="btn btn-danger">削除</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts Fragment -->
+<th:block th:fragment="scripts">
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Edit Account Modal
+            const editAccountModal = document.getElementById('editAccountModal');
+            editAccountModal.addEventListener('show.bs.modal', event => {
+                const button = event.relatedTarget;
+                const id = button.dataset.id;
+                const name = button.dataset.name;
+                const isMain = button.dataset.isMain === 'true';
+                const isSavings = button.dataset.isSavings === 'true';
+
+                const form = editAccountModal.querySelector('form');
+                form.action = `/budget/management/accounts/update/${id}`;
+                form.querySelector('#editAccountName').value = name;
+                form.querySelector('#editIsMain').checked = isMain;
+                form.querySelector('#editIsSavings').checked = isSavings;
+            });
+
+            // Edit Category Modal
+            const editCategoryModal = document.getElementById('editCategoryModal');
+            editCategoryModal.addEventListener('show.bs.modal', event => {
+                const button = event.relatedTarget;
+                const id = button.dataset.id;
+                const name = button.dataset.name;
+
+                const form = editCategoryModal.querySelector('form');
+                form.action = `/budget/management/categories/update/${id}`;
+                form.querySelector('#editCategoryName').value = name;
+            });
+
+            // Delete Confirmation Modal
+            const deleteConfirmModal = document.getElementById('deleteConfirmModal');
+            deleteConfirmModal.addEventListener('show.bs.modal', event => {
+                const button = event.relatedTarget;
+                const id = button.dataset.id;
+                const name = button.dataset.name;
+                const type = button.dataset.type; // 'account' or 'category'
+
+                const message = deleteConfirmModal.querySelector('#deleteConfirmMessage');
+                const form = deleteConfirmModal.querySelector('#deleteForm');
+
+                if (type === 'account') {
+                    message.textContent = `口座「${name}」を削除してもよろしいですか？関連する取引は削除されません。`;
+                    form.action = `/budget/management/accounts/delete/${id}`;
+                } else if (type === 'category') {
+                    message.textContent = `カテゴリ「${name}」を削除してもよろしいですか？`;
+                    form.action = `/budget/management/categories/delete/${id}`;
+                }
+            });
+        });
+    </script>
+</th:block>
+
+</html>

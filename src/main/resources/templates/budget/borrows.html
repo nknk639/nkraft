@@ -18,6 +18,13 @@
 
 <!-- Content Fragment -->
 <div th:fragment="content">
+    <div class="d-flex justify-content-end mb-3">
+        <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" role="switch" id="showCompletedToggle">
+            <label class="form-check-label" for="showCompletedToggle">完了/達成済み項目を表示</label>
+        </div>
+    </div>
+
     <!-- Borrows Section -->
     <div class="d-flex justify-content-between align-items-center mb-2">
         <h4 class="mb-0">借入一覧</h4>
@@ -39,9 +46,11 @@
                 </tr>
                 </thead>
                 <tbody>
-                <tr th:each="dto : ${borrows}" th:with="borrow=${dto.borrow}">
+                <tr th:each="dto : ${borrows}" th:with="borrow=${dto.borrow}"
+                    th:classappend="${dto.isCompleted} ? 'completed-item table-light text-muted' : ''">
                     <td class="align-middle">
                         <a th:href="@{/budget/borrows/{id}(id=${borrow.borrowId})}" class="text-decoration-none fw-bold" th:text="${borrow.borrowName}"></a>
+                        <span th:if="${dto.isCompleted}" class="badge bg-secondary ms-2">完了</span>
                     </td>
                     <td class="align-middle text-end" th:text="'¥' + ${#numbers.formatDecimal(borrow.totalAmount, 0, 'COMMA', 0, 'POINT')}"></td>
                     <td class="align-middle text-end" th:text="'¥' + ${#numbers.formatDecimal(borrow.repaidAmount, 0, 'COMMA', 0, 'POINT')}"></td>
@@ -89,9 +98,11 @@
                 </tr>
                 </thead>
                 <tbody>
-                <tr th:each="dto : ${goals}" th:with="goal=${dto.goal}">
+                <tr th:each="dto : ${goals}" th:with="goal=${dto.goal}"
+                    th:classappend="${dto.isCompleted} ? 'completed-item table-light text-muted' : ''">
                     <td class="align-middle">
                         <a th:href="@{/budget/goals/{id}(id=${goal.goalId})}" class="text-decoration-none fw-bold" th:text="${goal.goalName}"></a>
+                        <span th:if="${dto.isCompleted}" class="badge bg-success ms-2">達成</span>
                     </td>
                     <td class="align-middle text-end" th:text="'¥' + ${#numbers.formatDecimal(goal.targetAmount, 0, 'COMMA', 0, 'POINT')}"></td>
                     <td class="align-middle text-end" th:text="'¥' + ${#numbers.formatDecimal(goal.savedAmount, 0, 'COMMA', 0, 'POINT')}"></td>
@@ -194,7 +205,32 @@
 
 <!-- Scripts Fragment -->
 <th:block th:fragment="scripts">
-    <!-- このページ固有のJavaScriptがあればここに記述 -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const toggle = document.getElementById('showCompletedToggle');
+            const completedItems = document.querySelectorAll('.completed-item');
+
+            // 1. localStorageから状態を読み込み、初期状態を設定
+            // デフォルトは表示(true)。'false'という文字列が保存されている場合のみ非表示
+            const showCompleted = localStorage.getItem('showCompleted') !== 'false';
+            toggle.checked = showCompleted;
+            updateVisibility(showCompleted);
+
+            // 2. トグルのイベントリスナーを設定
+            toggle.addEventListener('change', function() {
+                const isChecked = this.checked;
+                updateVisibility(isChecked);
+                localStorage.setItem('showCompleted', isChecked);
+            });
+
+            // 表示/非表示を更新する関数
+            function updateVisibility(show) {
+                completedItems.forEach(item => {
+                    item.style.display = show ? '' : 'none'; // '' はデフォルトの表示スタイル(table-row)に戻す
+                });
+            }
+        });
+    </script>
 </th:block>
 
 </html>

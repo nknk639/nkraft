@@ -6,6 +6,6 @@ import java.util.List;
 import java.util.Optional;
 
 public interface CategoryRepository extends JpaRepository<Category, Long> {
-    List<Category> findByNkraftUser_Id(Long nkraftUserId);
+    List<Category> findByNkraftUser_IdAndIsDeletedFalse(Long nkraftUserId);
     Optional<Category> findByCategoryNameAndNkraftUser(String categoryName, com.nkraft.user.entity.NkraftUser user);
 }
