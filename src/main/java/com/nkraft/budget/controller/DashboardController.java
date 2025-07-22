@@ -100,6 +100,10 @@ public class DashboardController {
         // 2.6 繰り返し予定リスト
         model.addAttribute("recurringTransactions", recurringTransactionService.getRecurringTransactionsForUser(currentUser));
 
+        // 2.7 目標・借入サマリー
+        model.addAttribute("borrows", borrowService.getBorrowsForUser(currentUser));
+        model.addAttribute("goals", goalService.getGoalsForUser(currentUser));
+
         return "budget/dashboard"; // "templates/budget/dashboard.html" を表示
     }
 

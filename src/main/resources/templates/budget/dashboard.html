@@ -135,7 +135,7 @@
                         </div>
                     </div>
 
-                    <div th:if="${transactions != null and not #lists.isEmpty(transactions)}" class="card shadow-sm flex-grow-1">
+                    <div th:if="${transactions != null and not #lists.isEmpty(transactions)}" class="card shadow-sm mb-4">
                         <div class="card-header fw-bold d-flex justify-content-between align-items-center">
                             取引予定リスト
                             <div>
@@ -211,28 +211,16 @@
                             </div>
                         </div>
                     </div>
-                    <div th:if="${transactions == null or #lists.isEmpty(transactions)}" class="card shadow-sm flex-grow-1">
+                    <div th:if="${transactions == null or #lists.isEmpty(transactions)}" class="card shadow-sm mb-4">
                         <div class="card-body">
                             <p class="text-muted text-center mb-0">メイン口座が設定されていないか、取引予定がありません。</p>
                         </div>
                     </div>
                     
-                    <!-- 残高推移予測グラフ -->
-                    <div class="card shadow-sm mb-4">
-                        <div class="card-header fw-bold">残高推移予測</div>
-                        <div class="card-body">
-                            <!-- TODO: Chart.jsでグラフを描画 (F-B01) -->
-                            <canvas id="balanceChart" height="200"></canvas>
-                        </div>
-                    </div>
-
                     <!-- 目標・借入一覧 -->
-                    <div class="card shadow-sm flex-grow-1">
+                    <div class="card shadow-sm">
                         <div class="card-header fw-bold">目標・借入</div>
-                        <div class="card-body">
-                            <!-- TODO: 目標と借入リストを表示 (F-B06, F-B07) -->
-                             <p>ここに目標・借入の一覧が表示されます。</p>
-                        </div>
+                        <div class="card-body" th:replace="~{fragments/borrow_goal_summary :: summary(borrows=${borrows.?[!isCompleted]}, goals=${goals.?[!isCompleted]})}"></div>
                     </div>
                 </div>
             </div> <!-- .row.g-4 の閉じタグ -->
@@ -251,35 +239,4 @@
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
 <script th:replace="~{fragments/transaction_scripts :: dashboardTransactionScript(transactions=${transactions}, mainAccountBalance=${mainAccountBalance}, transactionTypes=${transactionTypes}, categories=${categories}, savingsAccounts=${savingsAccounts})}"></script>
-<script>
-    // This is for the chart, which is specific to the dashboard.
-    document.addEventListener('DOMContentLoaded', function () {
-        const ctx = document.getElementById('balanceChart');
-        if (ctx) {
-            // TODO: Replace with dynamic data from the controller
-            new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: ['7月', '8月', '9月', '10月', '11月', '12月'],
-                    datasets: [{
-                        label: '残高予測',
-                        data: [1234567, 1384567, 1234567, 1734567, 1584567, 1434567],
-                        borderColor: 'rgb(0, 31, 63)',
-                        tension: 0.1
-                    }]
-                },
-                options: {
-                    scales: {
-                        y: {
-                            beginAtZero: false,
-                            ticks: {
-                                callback: function (value) { return '¥' + value.toLocaleString(); }
-                            }
-                        }
-                    }
-                }
-            });
-        }
-    });
-</script>
 </th:block>
