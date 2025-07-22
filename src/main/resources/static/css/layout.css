@@ -1,0 +1,20 @@
+/* ===============================================
+   Responsive Layout Styles
+   =============================================== */
+
+/* Default (PC / 1025px and up) */
+.hamburger-button {
+    display: none; /* Hide hamburger on PC */
+}
+
+/* Tablet & Mobile (1024px and below) */
+@media (max-width: 1024px) {
+    .sidebar-fixed {
+        display: none; /* Hide the fixed sidebar */
+    }
+
+    .hamburger-button {
+        display: block; /* Show the hamburger icon */
+        margin-right: 1rem; /* Add some space between icon and logo */
+    }
+}

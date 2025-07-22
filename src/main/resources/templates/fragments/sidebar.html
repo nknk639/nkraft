@@ -2,8 +2,8 @@
 <html lang="ja" xmlns:th="http://www.thymeleaf.org">
 <body>
 
-<!--/* Sidebar Fragment */-->
-<aside th:fragment="sidebar(title)" class="sidebar p-3 flex-shrink-0">
+<!--/* Sidebar Content Fragment */-->
+<div th:fragment="sidebar_content(title)">
     <div class="accordion accordion-flush" id="sidebarAccordion">
         <div class="accordion-item bg-transparent border-0">
             <h2 class="accordion-header">
@@ -23,7 +23,7 @@
             </div>
         </div>
     </div>
-</aside>
+</div>
 
 </body>
 </html>

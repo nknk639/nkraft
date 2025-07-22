@@ -5,10 +5,13 @@
 <!--/* Header Fragment */-->
 <header th:fragment="header(breadcrumbs)" class="navbar navbar-expand-lg bg-white border-bottom shadow-sm flex-shrink-0">
     <div class="container-fluid">
-        <a class="navbar-brand d-flex align-items-center" href="#">
-            <div class="d-inline-block align-text-top me-2" style="width: 32px; height: 32px; background-color: var(--sidebar-bg); border-radius: 0.5rem; padding: 4px;">
-                <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path d="M30 25 C 40 18, 60 18, 70 25 S 85 32, 70 32 S 40 32, 30 25 Z" fill="#87CEEB"/><path d="M30 30 L 25 90 H 75 L 70 30" stroke="white" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
-            </div>
+        <!-- Hamburger Icon for Offcanvas -->
+        <button class="btn btn-outline-secondary hamburger-button" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarOffcanvas" aria-controls="sidebarOffcanvas">
+            <i class="fas fa-bars"></i>
+        </button>
+
+        <a class="navbar-brand d-flex align-items-center" th:href="@{/budget/}">
+            <img th:src="@{/images/logo.png}" alt="NKraft Logo" width="32" height="32" class="d-inline-block align-text-top me-2">
             <span class="fw-bold fs-5" style="color: var(--sidebar-bg);">NKraft</span>
         </a>
         <!-- Breadcrumbs -->
