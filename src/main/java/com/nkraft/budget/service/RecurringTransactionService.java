@@ -9,7 +9,6 @@ import com.nkraft.budget.entity.BudgetTransactionType;
 import com.nkraft.budget.entity.Category;
 import com.nkraft.budget.entity.RecurringTransaction;
 import com.nkraft.budget.entity.RecurringTransactionRuleType;
-import com.nkraft.budget.entity.TransactionStatus;
 import com.nkraft.budget.entity.Transaction;
 import com.nkraft.budget.repository.AccountRepository;
 import com.nkraft.budget.repository.BudgetTransactionTypeRepository;
@@ -176,6 +175,8 @@ public class RecurringTransactionService {
                 rt.getAmount(),
                 rt.getName(), // ルール名をメモとして利用
                 rt // ★★★ ここで関連付け情報を渡す
+                , null
+                , null
         );
     }
 

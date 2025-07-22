@@ -173,15 +173,15 @@
                 <ul class="pagination justify-content-center">
                     <!-- Previous Page Link -->
                     <li class="page-item" th:classappend="${page.first} ? 'disabled'">
-                        <a class="page-link" th:href="@{/budget/transactions(page=${page.number - 1}, size=${page.size}, keyword=${searchForm.keyword}, startDate=${searchForm.startDate}, endDate=${searchForm.endDate}, accountIds=${searchForm.accountIds}, categoryIds=${searchForm.categoryIds}, statuses=${searchForm.statuses}, sort=${page.sort.toString().replace(': ', ',')})}">&laquo;</a>
+                        <a class="page-link" th:href="@{/budget/transactions(page=${page.number - 1}, size=${page.size}, keyword=${searchForm.keyword}, startDate=${searchForm.startDate}, endDate=${searchForm.endDate}, accountIds=${searchForm.accountIds}, categoryIds=${searchForm.categoryIds}, statuses=${searchForm.statuses}, sort=${page.sort.isSorted() ? page.sort.toString().replace(': ', ',') : null})}">&laquo;</a>
                     </li>
                     <!-- Page Numbers -->
                     <li class="page-item" th:each="i : ${#numbers.sequence(0, page.totalPages - 1)}" th:classappend="${i == page.number} ? 'active'">
-                        <a class="page-link" th:href="@{/budget/transactions(page=${i}, size=${page.size}, keyword=${searchForm.keyword}, startDate=${searchForm.startDate}, endDate=${searchForm.endDate}, accountIds=${searchForm.accountIds}, categoryIds=${searchForm.categoryIds}, statuses=${searchForm.statuses}, sort=${page.sort.toString().replace(': ', ',')})}" th:text="${i + 1}"></a>
+                        <a class="page-link" th:href="@{/budget/transactions(page=${i}, size=${page.size}, keyword=${searchForm.keyword}, startDate=${searchForm.startDate}, endDate=${searchForm.endDate}, accountIds=${searchForm.accountIds}, categoryIds=${searchForm.categoryIds}, statuses=${searchForm.statuses}, sort=${page.sort.isSorted() ? page.sort.toString().replace(': ', ',') : null})}" th:text="${i + 1}"></a>
                     </li>
                     <!-- Next Page Link -->
                     <li class="page-item" th:classappend="${page.last} ? 'disabled'">
-                        <a class="page-link" th:href="@{/budget/transactions(page=${page.number + 1}, size=${page.size}, keyword=${searchForm.keyword}, startDate=${searchForm.startDate}, endDate=${searchForm.endDate}, accountIds=${searchForm.accountIds}, categoryIds=${searchForm.categoryIds}, statuses=${searchForm.statuses}, sort=${page.sort.toString().replace(': ', ',')})}">&raquo;</a>
+                        <a class="page-link" th:href="@{/budget/transactions(page=${page.number + 1}, size=${page.size}, keyword=${searchForm.keyword}, startDate=${searchForm.startDate}, endDate=${searchForm.endDate}, accountIds=${searchForm.accountIds}, categoryIds=${searchForm.categoryIds}, statuses=${searchForm.statuses}, sort=${page.sort.isSorted() ? page.sort.toString().replace(': ', ',') : null})}">&raquo;</a>
                     </li>
                 </ul>
             </nav>

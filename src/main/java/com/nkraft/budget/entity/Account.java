@@ -51,4 +51,7 @@ public class Account {
 
     @Column(name = "is_savings")
     private Boolean isSavings;
+
+    @Column(name = "is_deleted")
+    private Boolean isDeleted = false;
 }

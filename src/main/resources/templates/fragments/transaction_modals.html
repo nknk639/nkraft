@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- Edit Transaction Modal Fragment -->
+<div th:fragment="editTransactionModal(redirectUrl)" class="modal fade" id="editTransactionModal" tabindex="-1" aria-labelledby="editTransactionModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editTransactionModalLabel">取引を編集</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="editTransactionForm" th:action="@{/budget/transactions/update}" method="post">
+                <div class="modal-body">
+                    <input type="hidden" name="redirectUrl" th:value="${redirectUrl}">
+                    <input type="hidden" id="editTransactionId" name="transactionId">
+
+                    <div class="mb-3">
+                        <label for="editTransactionDate" class="form-label">取引日</label>
+                        <input type="date" class="form-control" id="editTransactionDate" name="transactionDate" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="editAmount" class="form-label">予定額</label>
+                        <input type="number" class="form-control" id="editAmount" name="plannedAmount" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="editTransactionType" class="form-label">取引種別</label>
+                        <select class="form-select" id="editTransactionType" name="budgetTransactionTypeId" required>
+                            <option th:each="type : ${transactionTypes}" th:value="${type.id}" th:text="${type.name}"></option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="editCategory" class="form-label">カテゴリ</label>
+                        <select class="form-select" id="editCategory" name="categoryId">
+                            <option value="">未分類</option>
+                            <option th:each="cat : ${categories}" th:value="${cat.id}" th:text="${cat.categoryName}"></option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="editMemo" class="form-label">メモ</label>
+                        <input type="text" class="form-control" id="editMemo" name="memo">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                    <button type="submit" class="btn btn-primary">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal Fragment -->
+<div th:fragment="deleteConfirmModal" class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-labelledby="deleteConfirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteConfirmModalLabel">取引の削除</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                この取引を削除してもよろしいですか？この操作は元に戻せません。
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">削除</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Savings Modal Fragment -->
+<div th:fragment="savingsModal" class="modal fade" id="savingsModal" tabindex="-1" aria-labelledby="savingsModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="savingsModalLabel">差額を貯金へ</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>予定より少ない支出ですみました。差額を振り替える貯金口座を選択してください。</p>
+                <form id="savingsForm">
+                    <input type="hidden" id="savingsTransactionId" name="transactionId">
+                    <div class="mb-3">
+                        <label for="savingsAccountId" class="form-label">振替先口座</label>
+                        <select class="form-select" id="savingsAccountId" name="savingsAccountId" required>
+                            <option th:each="acc : ${savingsAccounts}" th:value="${acc.accountId}" th:text="${acc.accountName}">貯蓄用口座</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                <button type="button" class="btn btn-primary" id="confirmSavingsBtn">OK</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

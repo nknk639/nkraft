@@ -2,9 +2,10 @@ package com.nkraft.budget.controller;
 
 import com.nkraft.budget.entity.Account;
 import com.nkraft.budget.entity.BudgetTransactionType;
+import com.nkraft.budget.dto.GoalViewDTO;
+import com.nkraft.budget.dto.BorrowViewDTO;
 import com.nkraft.budget.entity.Transaction;
 import com.nkraft.budget.entity.Category;
-import com.nkraft.budget.dto.RecurringTransactionViewDTO;
 import com.nkraft.budget.dto.TransactionDateUpdateDTO;
 import com.nkraft.budget.dto.TransactionDTO;
 import com.nkraft.budget.service.*;
@@ -50,6 +51,8 @@ public class DashboardController {
     private final CategoryService categoryService;
     private final TransactionService transactionService;
     private final RecurringTransactionService recurringTransactionService;
+    private final BorrowService borrowService;
+    private final GoalService goalService;
 
     private static final Logger logger = LoggerFactory.getLogger(DashboardController.class);
 
@@ -75,16 +78,13 @@ public class DashboardController {
         model.addAttribute("accounts", accounts);
 
         // 2.2 取引種別リスト
-        List<BudgetTransactionType> transactionTypes = budgetTransactionTypeService.getAllTransactionTypes();
-        model.addAttribute("transactionTypes", transactionTypes);
+        model.addAttribute("transactionTypes", budgetTransactionTypeService.getAllTransactionTypesAsDTO());
 
         // 2.3 カテゴリリスト
-        List<Category> categories = categoryService.getCategoriesByUserId(userId);
-        model.addAttribute("categories", categories);
+        model.addAttribute("categories", categoryService.getCategoriesByUserIdAsDTO(userId));
 
         // 2.4 F-B09(差額貯金)用の貯金口座リスト
-         List<Account> savingsAccounts = accountService.findSavingsAccountsByUserId(userId);
-         model.addAttribute("savingsAccounts", savingsAccounts);
+         model.addAttribute("savingsAccounts", accountService.findSavingsAccountsByUserIdAsDTO(userId));
 
         // 2.5 メイン口座の取引予定と残高を取得 (F-B01, F-B03)
          Optional<Account> mainAccount = accountService.findMainAccountByUserId(userId);
@@ -135,7 +135,7 @@ public class DashboardController {
         Category category = (categoryId != null) ? categoryService.getCategoryById(categoryId) : null;
 
         // 取引登録サービスを呼び出し
-        transactionService.createTransaction(currentUser, account, budgetTransactionType, category, LocalDate.parse(transactionDate), plannedAmount, memo, null);
+        transactionService.createTransaction(currentUser, account, budgetTransactionType, category, LocalDate.parse(transactionDate), plannedAmount, memo, null, null, null);
 
         redirectAttributes.addFlashAttribute("message", "取引を登録しました。");
         return "redirect:/budget/";
@@ -178,6 +178,19 @@ public class DashboardController {
             response.put("success", true);
             response.put("newBalance", updatedAccount.getBalance());
             response.put("savingsDifference", savingsDifference);
+
+            // If a borrow was updated, add its new state to the response
+            if (completedTransaction.getBorrow() != null) {
+                BorrowViewDTO updatedBorrowDTO = borrowService.getBorrowViewDTO(completedTransaction.getBorrow().getBorrowId(), currentUser);
+                response.put("updatedBorrow", updatedBorrowDTO);
+            }
+
+            // If a goal was updated, add its new state to the response
+            if (completedTransaction.getGoal() != null) {
+                GoalViewDTO updatedGoalDTO = goalService.getGoalViewDTO(completedTransaction.getGoal().getGoalId(), currentUser);
+                response.put("updatedGoal", updatedGoalDTO);
+            }
+
             return ResponseEntity.ok(response);
         } catch (EntityNotFoundException | SecurityException | IllegalStateException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("success", false, "message", e.getMessage()));

@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/app :: layout(
+        title='借入・目標管理',
+        breadcrumbs=~{::breadcrumbs},
+        content=~{::content},
+        modals=~{::modals},
+        scripts=~{::scripts}
+      )}">
+
+<!-- Breadcrumbs Fragment -->
+<nav th:fragment="breadcrumbs" aria-label="breadcrumb">
+    <ol class="breadcrumb mb-0">
+        <li class="breadcrumb-item"><a th:href="@{/budget/}">予算管理</a></li>
+        <li class="breadcrumb-item active" aria-current="page">借入・目標管理</li>
+    </ol>
+</nav>
+
+<!-- Content Fragment -->
+<div th:fragment="content">
+    <!-- Borrows Section -->
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <h4 class="mb-0">借入一覧</h4>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newBorrowModal">
+            <i class="fas fa-plus me-1"></i> 新規借入を登録
+        </button>
+    </div>
+
+    <div class="card shadow-sm mb-5">
+        <div class="card-body">
+            <table class="table table-hover">
+                <thead>
+                <tr>
+                    <th style="width: 25%;">借入名</th>
+                    <th class="text-end" style="width: 15%;">借入総額</th>
+                    <th class="text-end" style="width: 15%;">返済済み額</th>
+                    <th style="width: 35%;">返済状況</th>
+                    <th class="text-center" style="width: 10%;">操作</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="dto : ${borrows}" th:with="borrow=${dto.borrow}">
+                    <td class="align-middle">
+                        <a th:href="@{/budget/borrows/{id}(id=${borrow.borrowId})}" class="text-decoration-none fw-bold" th:text="${borrow.borrowName}"></a>
+                    </td>
+                    <td class="align-middle text-end" th:text="'¥' + ${#numbers.formatDecimal(borrow.totalAmount, 0, 'COMMA', 0, 'POINT')}"></td>
+                    <td class="align-middle text-end" th:text="'¥' + ${#numbers.formatDecimal(borrow.repaidAmount, 0, 'COMMA', 0, 'POINT')}"></td>
+                    <td class="align-middle">
+                        <div class="progress" style="height: 20px;">
+                            <div class="progress-bar" role="progressbar"
+                                 th:style="'width: ' + ${dto.repaymentRatePercent} + '%;'"
+                                 th:attr="aria-valuenow=${dto.repaymentRatePercent}"
+                                 aria-valuemin="0" aria-valuemax="100"
+                                 th:text="${dto.repaymentRatePercent} + '%'">
+                            </div>
+                        </div>
+                    </td>
+                    <td class="align-middle text-center">
+                        <a th:href="@{/budget/borrows/{id}(id=${borrow.borrowId})}" class="btn btn-sm btn-outline-primary" title="詳細">
+                            <i class="fas fa-search"></i>
+                        </a>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(borrows)}">
+                    <td colspan="5" class="text-center text-muted p-4">借入はありません。</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Goals Section -->
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <h4 class="mb-0">目標一覧</h4>
+        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#newGoalModal">
+            <i class="fas fa-plus me-1"></i> 新規目標を登録
+        </button>
+    </div>
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <table class="table table-hover">
+                <thead>
+                <tr>
+                    <th style="width: 25%;">目標名</th>
+                    <th class="text-end" style="width: 15%;">目標金額</th>
+                    <th class="text-end" style="width: 15%;">貯金済み額</th>
+                    <th style="width: 35%;">達成状況</th>
+                    <th class="text-center" style="width: 10%;">操作</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="dto : ${goals}" th:with="goal=${dto.goal}">
+                    <td class="align-middle">
+                        <a th:href="@{/budget/goals/{id}(id=${goal.goalId})}" class="text-decoration-none fw-bold" th:text="${goal.goalName}"></a>
+                    </td>
+                    <td class="align-middle text-end" th:text="'¥' + ${#numbers.formatDecimal(goal.targetAmount, 0, 'COMMA', 0, 'POINT')}"></td>
+                    <td class="align-middle text-end" th:text="'¥' + ${#numbers.formatDecimal(goal.savedAmount, 0, 'COMMA', 0, 'POINT')}"></td>
+                    <td class="align-middle">
+                        <div class="progress" style="height: 20px;">
+                            <div class="progress-bar bg-success" role="progressbar"
+                                 th:style="'width: ' + ${dto.progressRatePercent} + '%;'"
+                                 th:attr="aria-valuenow=${dto.progressRatePercent}"
+                                 aria-valuemin="0" aria-valuemax="100"
+                                 th:text="${dto.progressRatePercent} + '%'">
+                            </div>
+                        </div>
+                    </td>
+                    <td class="align-middle text-center">
+                        <a th:href="@{/budget/goals/{id}(id=${goal.goalId})}" class="btn btn-sm btn-outline-success" title="詳細">
+                            <i class="fas fa-search"></i>
+                        </a>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(goals)}">
+                    <td colspan="5" class="text-center text-muted p-4">目標はありません。</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modals Fragment -->
+<div th:fragment="modals">
+    <div class="modal fade" id="newBorrowModal" tabindex="-1" aria-labelledby="newBorrowModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="newBorrowModalLabel">新規借入の登録</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form th:action="@{/budget/borrows/create}" method="post" th:object="${borrowCreateDTO}">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="borrowName" class="form-label">借入名</label>
+                            <input type="text" class="form-control" id="borrowName" th:field="*{borrowName}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="totalAmount" class="form-label">借入総額</label>
+                            <div class="input-group">
+                                <span class="input-group-text">¥</span>
+                                <input type="number" class="form-control" id="totalAmount" th:field="*{totalAmount}" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="depositAccountId" class="form-label">入金先口座</label>
+                            <select class="form-select" id="depositAccountId" th:field="*{depositAccountId}" required>
+                                <option value="">選択してください</option>
+                                <option th:each="acc : ${accounts}" th:value="${acc.accountId}" th:text="${acc.accountName}"></option>
+                            </select>
+                            <div class="form-text">借入金が入金される口座を選択してください。</div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                        <button type="submit" class="btn btn-primary">登録</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Goal Modal -->
+    <div class="modal fade" id="newGoalModal" tabindex="-1" aria-labelledby="newGoalModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="newGoalModalLabel">新規目標の登録</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form th:action="@{/budget/borrows/create-goal}" method="post" th:object="${goalCreateDTO}">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="goalName" class="form-label">目標名</label>
+                            <input type="text" class="form-control" id="goalName" th:field="*{goalName}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="targetAmount" class="form-label">目標金額</label>
+                            <div class="input-group">
+                                <span class="input-group-text">¥</span>
+                                <input type="number" class="form-control" id="targetAmount" th:field="*{targetAmount}" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                        <button type="submit" class="btn btn-success">登録</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts Fragment -->
+<th:block th:fragment="scripts">
+    <!-- このページ固有のJavaScriptがあればここに記述 -->
+</th:block>
+
+</html>

@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/app :: layout(
+        title=${pageTitle},
+        breadcrumbs=~{::breadcrumbs},
+        content=~{::content},
+        modals=~{::modals},
+        scripts=~{::scripts}
+      )}">
+
+<!-- Breadcrumbs Fragment -->
+<nav th:fragment="breadcrumbs" aria-label="breadcrumb">
+    <ol class="breadcrumb mb-0">
+        <li class="breadcrumb-item"><a th:href="@{/budget/}">予算管理</a></li>
+        <li class="breadcrumb-item"><a th:href="@{/budget/borrows}">借入管理</a></li>
+        <li class="breadcrumb-item active" aria-current="page" th:text="${pageTitle}"></li>
+    </ol>
+</nav>
+
+<!-- Content Fragment -->
+<div th:fragment="content" th:with="borrowDto=${borrowDetail.borrow}, borrow=${borrowDetail.borrow.borrow}">
+    <!-- 1. 借入サマリー -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-3">
+                    <h5 class="card-title mb-1" th:text="${borrow.borrowName}"></h5>
+                    <p class="card-text text-muted">借入サマリー</p>
+                </div>
+                <div class="col-md-6">
+                    <div class="progress" style="height: 25px;">
+                        <div class="progress-bar" role="progressbar" id="repaymentProgressBar"
+                             th:style="'width: ' + ${borrowDto.repaymentRatePercent} + '%;'"
+                             th:attr="aria-valuenow=${borrowDto.repaymentRatePercent}"
+                             aria-valuemin="0" aria-valuemax="100"
+                             th:text="${borrowDto.repaymentRatePercent} + '%'">
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 text-md-end mt-3 mt-md-0">
+                    <span id="repaidAmount" th:text="'¥' + ${#numbers.formatDecimal(borrow.repaidAmount, 0, 'COMMA', 0, 'POINT')}"></span> /
+                    <span th:text="'¥' + ${#numbers.formatDecimal(borrow.totalAmount, 0, 'COMMA', 0, 'POINT')}"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. 返済予定リスト -->
+    <div class="card shadow-sm">
+        <div class="card-header fw-bold d-flex justify-content-between align-items-center">
+            <span>返済予定リスト</span>
+            <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#newRepaymentModal">
+                <i class="fas fa-plus me-1"></i> 新規返済を追加
+            </button>
+        </div>
+        <div class="card-body p-0">
+            <div style="max-height: 500px; overflow-y: auto;">
+                <table class="table table-hover mb-0" id="repayment-transactions-table">
+                    <thead>
+                    <tr>
+                        <th style="width: 12%;">日付</th>
+                        <th style="width: 37%;">内容</th>
+                        <th class="text-end" style="width: 15%;">予定額</th>
+                        <th class="text-center" style="width: 15%;">実績額</th>
+                        <th class="text-center" style="width: 10%;">完了</th>
+                        <th class="text-center" style="width: 8%;">操作</th>
+                    </tr>
+                    </thead>
+                    <tbody id="repayment-transactions-body">
+                    <tr th:each="tx : ${borrowDetail.repaymentTransactions}"
+                        th:data-transaction-id="${tx.transactionId}"
+                        class="table-info">
+                        <td th:text="${#temporals.format(tx.transactionDate, 'yyyy-MM-dd')}" class="align-middle transaction-date"></td>
+                        <td class="align-middle">
+                            <span th:text="${tx.memo}" class="d-block"></span>
+                            <small class="text-muted" th:text="${tx.categoryName} ?: '未分類'"></small>
+                        </td>
+                        <td class="text-end align-middle">
+                            <span class="text-danger">-</span>
+                            <span class="text-danger" th:text="${#numbers.formatDecimal(tx.plannedAmount, 0, 'COMMA', 0, 'POINT')}"></span>
+                        </td>
+                        <td class="text-center align-middle">
+                            <input type="number" class="form-control form-control-sm text-end actual-amount-input" th:value="${tx.plannedAmount}" placeholder="実績額">
+                        </td>
+                        <td class="text-center align-middle">
+                            <div class="form-check form-switch d-flex justify-content-center">
+                                <input class="form-check-input repayment-complete-toggle" type="checkbox" role="switch">
+                            </div>
+                        </td>
+                        <td class="text-center align-middle">
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button type="button" class="btn btn-outline-secondary edit-btn"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#editTransactionModal"
+                                        th:data-transaction-id="${tx.transactionId}"
+                                        th:data-date="${tx.transactionDate}"
+                                        th:data-planned-amount="${tx.plannedAmount}"
+                                        th:data-type-id="${tx.budgetTransactionTypeId}"
+                                        th:data-category-id="${tx.categoryId}"
+                                        th:data-memo="${tx.memo}"
+                                        title="編集">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button type="button" class="btn btn-outline-danger delete-btn"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#deleteConfirmModal"
+                                        th:data-transaction-id="${tx.transactionId}"
+                                        title="削除">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(borrowDetail.repaymentTransactions)}"><td colspan="6" class="text-center text-muted p-4">返済予定はありません。</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. 取引予定リスト (ダッシュボードと同様) -->
+    <div class="card shadow-sm mt-4" th:if="${borrowDetail.mainAccountPlannedTransactions != null}">
+        <div class="card-header fw-bold d-flex justify-content-between align-items-center">
+            <span>メイン口座 取引予定リスト</span>
+        </div>
+        <div class="card-body p-0">
+            <div style="max-height: 400px; overflow-y: auto;">
+                <table class="table table-hover mb-0" id="main-account-transactions-table">
+                    <thead>
+                    <tr>
+                        <th style="width: 12%;">日付</th>
+                        <th style="width: 25%;">内容</th>
+                        <th class="text-end" style="width: 15%;">予定額</th>
+                        <th class="text-center" style="width: 15%;">実績額</th>
+                        <th class="text-center" style="width: 10%;">完了</th>
+                        <th class="text-center" style="width: 8%;">操作</th>
+                        <th class="text-end" style="width: 15%;">残高</th>
+                    </tr>
+                    </thead>
+                    <tbody id="main-account-transactions-body">
+                    <tr th:each="tx, iterStat : ${borrowDetail.mainAccountPlannedTransactions}"
+                        th:data-transaction-id="${tx.transactionId}"
+                        th:classappend="${tx.borrowId != null and tx.borrowId == borrow.borrowId} ? 'table-info' : ''">
+                        <td th:text="${#temporals.format(tx.transactionDate, 'yyyy-MM-dd')}" class="align-middle transaction-date"></td>
+                        <td class="align-middle">
+                            <span th:text="${tx.memo}" class="d-block"></span>
+                            <small class="text-muted" th:text="${tx.categoryName} ?: '未分類'"></small>
+                        </td>
+                        <td class="text-end align-middle">
+                            <span th:text="${tx.budgetTransactionTypeName == '入金' ? '+' : '-'}" th:classappend="${tx.budgetTransactionTypeName == '入金' ? 'text-success' : 'text-danger'}"></span>
+                            <span th:text="${#numbers.formatDecimal(tx.plannedAmount, 0, 'COMMA', 0, 'POINT')}" th:classappend="${tx.budgetTransactionTypeName == '入金' ? 'text-success' : 'text-danger'}"></span>
+                        </td>
+                        <td class="text-center align-middle">
+                            <input type="number" class="form-control form-control-sm text-end actual-amount-input" th:value="${tx.plannedAmount}" placeholder="実績額">
+                        </td>
+                        <td class="text-center align-middle">
+                            <div class="form-check form-switch d-flex justify-content-center">
+                                <input class="form-check-input complete-toggle" type="checkbox" role="switch">
+                            </div>
+                        </td>
+                        <td class="text-center align-middle">
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button type="button" class="btn btn-outline-secondary edit-btn"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#editTransactionModal"
+                                        th:data-transaction-id="${tx.transactionId}"
+                                        th:data-date="${tx.transactionDate}"
+                                        th:data-planned-amount="${tx.plannedAmount}"
+                                        th:data-type-id="${tx.budgetTransactionTypeId}"
+                                        th:data-category-id="${tx.categoryId}"
+                                        th:data-memo="${tx.memo}"
+                                        title="編集"><i class="fas fa-edit"></i></button>
+                                <button type="button" class="btn btn-outline-danger delete-btn" data-bs-toggle="modal" data-bs-target="#deleteConfirmModal" th:data-transaction-id="${tx.transactionId}" title="削除"><i class="fas fa-trash-alt"></i></button>
+                            </div>
+                        </td>
+                        <td class="text-end align-middle fw-bold transaction-balance"></td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(borrowDetail.mainAccountPlannedTransactions)}">
+                        <td colspan="6" class="text-center text-muted p-4">メイン口座の取引予定はありません。</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modals Fragment -->
+<div th:fragment="modals">
+    <div class="modal fade" id="newRepaymentModal" tabindex="-1" aria-labelledby="newRepaymentModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="newRepaymentModalLabel">新規返済の登録</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form th:action="@{/budget/borrows/{id}/repayments(id=${borrowDetail.borrow.borrow.borrowId})}" method="post" th:object="${repaymentCreateDTO}">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="repaymentDate" class="form-label">返済予定日</label>
+                            <input type="date" class="form-control" id="repaymentDate" th:field="*{repaymentDate}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="repaymentAmount" class="form-label">返済予定額</label>
+                            <div class="input-group">
+                                <span class="input-group-text">¥</span>
+                                <input type="number" class="form-control" id="repaymentAmount" th:field="*{repaymentAmount}" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="sourceAccountId" class="form-label">返済元口座</label>
+                            <select class="form-select" id="sourceAccountId" th:field="*{sourceAccountId}" required>
+                                <option value="">選択してください</option>
+                                <option th:each="acc : ${accounts}" th:value="${acc.accountId}" th:text="${acc.accountName}" th:selected="${acc.isMain}"></option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="repaymentMemo" class="form-label">メモ</label>
+                            <input type="text" class="form-control" id="repaymentMemo" th:field="*{memo}" th:placeholder="${borrowDetail.borrow.borrow.borrowName} + 'への返済'">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                        <button type="submit" class="btn btn-primary">登録</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit/Delete Modals (from dashboard) -->
+    <div th:replace="~{fragments/transaction_modals :: savingsModal}"></div>
+    <div th:replace="~{fragments/transaction_modals :: editTransactionModal(redirectUrl='/budget/borrows/' + ${borrowDetail.borrow.borrow.borrowId})}"></div>
+    <div th:replace="~{fragments/transaction_modals :: deleteConfirmModal}"></div>
+</div>
+
+<!-- Scripts Fragment -->
+<th:block th:fragment="scripts">
+    <!-- Dashboard Transaction Script -->
+    <script th:replace="~{fragments/transaction_scripts :: dashboardTransactionScript(
+        transactions=${borrowDetail.mainAccountPlannedTransactions},
+        mainAccountBalance=${borrowDetail.mainAccountBalance},
+        transactionTypes=${transactionTypes}, 
+        categories=${categories}, 
+        savingsAccounts=${savingsAccounts} 
+    )}"></script>
+
+    <script th:inline="javascript">
+        document.addEventListener('DOMContentLoaded', function () {
+            // =================================================
+            // 返済予定リスト専用の完了トグルロジック
+            // =================================================
+            document.querySelectorAll('.repayment-complete-toggle').forEach(toggle => {
+                toggle.addEventListener('change', function() {
+                    const row = this.closest('tr');
+                    const transactionId = row.dataset.transactionId;
+                    const actualAmountInput = row.querySelector('.actual-amount-input');
+                    const actualAmount = actualAmountInput.value.trim() === '' ? null : actualAmountInput.value;
+
+                    const csrfToken = document.querySelector("meta[name='_csrf']").getAttribute("content");
+                    const csrfHeader = document.querySelector("meta[name='_csrf_header']").getAttribute("content");
+
+                    const formData = new URLSearchParams();
+                    formData.append('transactionId', transactionId);
+                    if (actualAmount !== null) formData.append('actualAmount', actualAmount);
+
+                    this.disabled = true;
+                    actualAmountInput.disabled = true;
+
+                    fetch('/budget/borrows/repayments/complete', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            [csrfHeader]: csrfToken
+                        },
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // 1. 行をグレーアウト
+                            row.classList.add('table-secondary', 'text-muted');
+                            // 2. サマリーを更新
+                            if (data.updatedBorrow) {
+                                const borrow = data.updatedBorrow;
+                                const repaidAmountEl = document.getElementById('repaidAmount');
+                                const progressBarEl = document.getElementById('repaymentProgressBar');
+
+                                repaidAmountEl.textContent = `¥${borrow.borrow.repaidAmount.toLocaleString()}`;
+                                progressBarEl.style.width = `${borrow.repaymentRatePercent}%`;
+                                progressBarEl.textContent = `${borrow.repaymentRatePercent}%`;
+                                progressBarEl.setAttribute('aria-valuenow', borrow.repaymentRatePercent);
+                            }
+                            // 3. 残高を再計算 (完了した行はDOMから消さないので、JS側でロジックの調整は不要)
+                            //    ただし、完了した取引は将来の残高計算に影響を与えなくなるため、ページリロードが最もシンプル
+                            window.location.reload();
+                        } else {
+                            alert('エラー: ' + (data.message || '不明なエラー'));
+                            this.checked = false;
+                            this.disabled = false;
+                            actualAmountInput.disabled = false;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('通信エラーが発生しました。');
+                        this.checked = false;
+                        this.disabled = false;
+                        actualAmountInput.disabled = false;
+                    });
+                });
+            });
+
+        });
+    </script>
+</th:block>
+
+</html>

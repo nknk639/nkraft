@@ -2,7 +2,6 @@ package com.nkraft.budget.controller;
 
 import com.nkraft.budget.dto.RecurringTransactionCreateDTO;
 import com.nkraft.budget.dto.RecurringTransactionUpdateDTO;
-import com.nkraft.budget.entity.RecurringTransaction;
 import com.nkraft.budget.service.AccountService;
 import com.nkraft.budget.service.BudgetTransactionTypeService;
 import com.nkraft.budget.service.CategoryService;
@@ -28,7 +27,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.Map;
-import java.util.List;
 
 @Controller
 @RequestMapping("/budget/recurring")
@@ -55,9 +53,9 @@ public class RecurringTransactionController {
         model.addAttribute("recurringTransactionsJs", recurringTransactionService.getRecurringTransactionsForUserAsJsDTO(currentUser));
 
         // Data for the "Create New" modal
-        model.addAttribute("accounts", accountService.getAccountsByUserId(userId));
-        model.addAttribute("transactionTypes", budgetTransactionTypeService.getAllTransactionTypes());
-        model.addAttribute("categories", categoryService.getCategoriesByUserId(userId));
+        model.addAttribute("accounts", accountService.getAccountsByUserIdAsDTO(userId));
+        model.addAttribute("transactionTypes", budgetTransactionTypeService.getAllTransactionTypesAsDTO());
+        model.addAttribute("categories", categoryService.getCategoriesByUserIdAsDTO(userId));
 
         return "budget/recurring";
     }

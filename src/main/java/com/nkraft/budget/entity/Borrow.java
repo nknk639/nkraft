@@ -44,4 +44,7 @@ public class Borrow {
 
     private BigDecimal totalAmount;
     private BigDecimal repaidAmount;
+
+    @Column(name = "is_deleted")
+    private Boolean isDeleted = false;
 }

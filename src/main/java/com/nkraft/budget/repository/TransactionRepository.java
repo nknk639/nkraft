@@ -13,6 +13,8 @@ import java.util.Optional;
 import com.nkraft.budget.entity.Transaction;
 import com.nkraft.budget.entity.Account;
 import com.nkraft.budget.entity.TransactionStatus;
+import com.nkraft.budget.entity.Goal;
+import com.nkraft.budget.entity.Borrow;
 import com.nkraft.user.entity.NkraftUser;
 import com.nkraft.budget.entity.RecurringTransaction;
 
@@ -28,6 +30,10 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long>,
      * @return 取引のリスト
      */
     List<Transaction> findByUserAndAccountAndTransactionStatusAndIsDeletedFalseOrderByTransactionDateAsc(NkraftUser user, Account account, TransactionStatus status);
+
+    List<Transaction> findByBorrowAndTransactionStatusAndIsDeletedFalseOrderByTransactionDateAsc(Borrow borrow, TransactionStatus status);
+
+    List<Transaction> findByGoalAndTransactionStatusAndIsDeletedFalseOrderByTransactionDateAsc(Goal goal, TransactionStatus status);
 
     Optional<Transaction> findTopByRecurringTransactionAndIsDeletedFalseOrderByTransactionDateDesc(RecurringTransaction recurringTransaction);
 

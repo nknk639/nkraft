@@ -184,9 +184,13 @@
                                             <td class="text-center align-middle">
                                                 <div class="btn-group btn-group-sm" role="group">
                                                     <button type="button" class="btn btn-outline-secondary edit-btn"
-                                                            data-bs-toggle="modal"
-                                                            data-bs-target="#editTransactionModal"
-                                                            th:attr="data-transaction-index=${iterStat.index}"
+                                                            data-bs-toggle="modal" data-bs-target="#editTransactionModal"
+                                                            th:data-transaction-id="${transaction.transactionId}"
+                                                            th:data-date="${transaction.transactionDate}"
+                                                            th:data-planned-amount="${transaction.plannedAmount}"
+                                                            th:data-type-id="${transaction.budgetTransactionTypeId}"
+                                                            th:data-category-id="${transaction.categoryId}"
+                                                            th:data-memo="${transaction.memo}"
                                                             title="編集">
                                                         <i class="fas fa-edit"></i>
                                                     </button>
@@ -235,105 +239,9 @@
 </div>
 
 <div th:fragment="modals">
-<div class="modal fade" id="savingsModal" tabindex="-1" aria-labelledby="savingsModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="savingsModalLabel">差額を貯金へ</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p>予定より少ない支出ですみました。差額を振り替える貯金口座を選択してください。</p>
-                <form id="savingsForm">
-                    <input type="hidden" id="savingsTransactionId" name="transactionId">
-                    <input type="hidden" id="savingsActualAmount" name="actualAmount">
-                    <div class="mb-3">
-                        <label for="savingsAccountId" class="form-label">振替先口座</label>
-                        <select class="form-select" id="savingsAccountId" name="savingsAccountId" required>
-                            <option th:each="acc : ${savingsAccounts}" th:value="${acc.accountId}" th:text="${acc.accountName}">貯蓄用口座</option>
-                        </select>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
-                <button type="button" class="btn btn-primary" id="confirmSavingsBtn">OK</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Edit Transaction Modal -->
-<div class="modal fade" id="editTransactionModal" tabindex="-1" aria-labelledby="editTransactionModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="editTransactionModalLabel">取引を編集</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form id="editTransactionForm" th:action="@{/budget/transactions/update}" method="post">
-                <div class="modal-body">
-                    <input type="hidden" name="redirectUrl" value="/budget/">
-                    <input type="hidden" id="editTransactionId" name="transactionId">
-
-                    <div class="mb-3">
-                        <label for="editTransactionDate" class="form-label">取引日</label>
-                        <input type="date" class="form-control" id="editTransactionDate" name="transactionDate" required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="editAmount" class="form-label">予定額</label>
-                        <input type="number" class="form-control" id="editAmount" name="plannedAmount" required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="editTransactionType" class="form-label">取引種別</label>
-                        <select class="form-select" id="editTransactionType" name="budgetTransactionTypeId" required>
-                            <option th:each="type : ${transactionTypes}" th:value="${type.id}" th:text="${type.name}"></option>
-                        </select>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="editCategory" class="form-label">カテゴリ</label>
-                        <select class="form-select" id="editCategory" name="categoryId">
-                            <option value="">未分類</option>
-                            <option th:each="cat : ${categories}" th:value="${cat.id}" th:text="${cat.categoryName}"></option>
-                        </select>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="editMemo" class="form-label">メモ</label>
-                        <input type="text" class="form-control" id="editMemo" name="memo">
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
-                    <button type="submit" class="btn btn-primary">保存</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Delete Confirmation Modal -->
-<div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-labelledby="deleteConfirmModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="deleteConfirmModalLabel">取引の削除</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                この取引を削除してもよろしいですか？この操作は元に戻せません。
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
-                <!-- このボタンにJavaScriptでIDを設定する -->
-                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">削除</button>
-            </div>
-        </div>
-    </div>
-</div>
+    <div th:replace="~{fragments/transaction_modals :: savingsModal}"></div>
+    <div th:replace="~{fragments/transaction_modals :: editTransactionModal(redirectUrl='/budget/')}"></div>
+    <div th:replace="~{fragments/transaction_modals :: deleteConfirmModal}"></div>
 </div>
 
 <!-- Scripts Fragment -->
@@ -342,20 +250,20 @@
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
-<script th:inline="javascript">
-
-
+<script th:replace="~{fragments/transaction_scripts :: dashboardTransactionScript(transactions=${transactions}, mainAccountBalance=${mainAccountBalance}, transactionTypes=${transactionTypes}, categories=${categories}, savingsAccounts=${savingsAccounts})}"></script>
+<script>
+    // This is for the chart, which is specific to the dashboard.
     document.addEventListener('DOMContentLoaded', function () {
-        // TODO: Controllerからデータを受け取り、グラフを初期化する (F-B01)
         const ctx = document.getElementById('balanceChart');
         if (ctx) {
+            // TODO: Replace with dynamic data from the controller
             new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: ['7月', '8月', '9月', '10月', '11月', '12月'], // TODO: 動的なラベル
+                    labels: ['7月', '8月', '9月', '10月', '11月', '12月'],
                     datasets: [{
                         label: '残高予測',
-                        data: [1234567, 1384567, 1234567, 1734567, 1584567, 1434567], // TODO: 動的なデータ
+                        data: [1234567, 1384567, 1234567, 1734567, 1584567, 1434567],
                         borderColor: 'rgb(0, 31, 63)',
                         tension: 0.1
                     }]
@@ -370,345 +278,6 @@
                         }
                     }
                 }
-            });
-        }
-
-        // F-B02, F-B03: フロントエンドでの残高計算ロジック
-        const calculateBalances = (transactionsToCalculate) => {
-            // ThymeleafからJavaオブジェクトを直接受け取る
-            const initialBalance = /*[[${mainAccountBalance}]]*/ 0;
-            
-            if (!transactionsToCalculate || transactionsToCalculate.length === 0) {
-                return;
-            }
-
-            let currentBalance = initialBalance;
-
-            const rows = document.querySelectorAll('#transactions-body tr');
-            if (rows.length !== transactionsToCalculate.length) {
-                console.error("DOM-JS Mismatch: The number of rows in the DOM does not match the number of transactions in the JavaScript array.");
-                return;
-            }
-
-            rows.forEach((row, index) => {
-                const transaction = transactionsToCalculate[index];
-                const amount = transaction.plannedAmount;                
-                const type = transaction.budgetTransactionTypeName;
-
-                if (type === '入金') {
-                    currentBalance += amount;
-                } else { // 出金 or 振替
-                    currentBalance -= amount;
-                }
-
-                const balanceCell = row.querySelector('.transaction-balance');
-                if (balanceCell) {
-                    // 3桁区切りで残高を表示
-                    balanceCell.textContent = `¥ ${Math.round(currentBalance).toLocaleString()}`;
-                    if(currentBalance < 0){
-                        balanceCell.classList.add('text-danger');
-                    } else {
-                        balanceCell.classList.remove('text-danger');
-                    }
-                }
-                // 日付も更新
-                const dateCell = row.querySelector('.transaction-date');
-                if (dateCell) {
-                    dateCell.textContent = transaction.transactionDate;
-                }
-            });
-        };
-
-        // ページ読み込み時に初回計算を実行
-        const initialTransactions = /*[[${transactions}]]*/ [];
-        calculateBalances(initialTransactions);
-
-        // --- イベントリスナー設定 ---
-
-        // F-B03: Edit transaction modal logic
-        const editTransactionModal = document.getElementById('editTransactionModal');
-        if (editTransactionModal) {
-            // ThymeleafからJavaScriptにデータを渡す
-            const transactions = /*[[${transactions}]]*/ [];
-            const transactionTypes = /*[[${transactionTypes}]]*/ [];
-            const categories = /*[[${categories}]]*/ [];
-
-            // モーダルが表示される直前のイベントを捕捉
-            editTransactionModal.addEventListener('show.bs.modal', event => {
-                // イベントのトリガーとなったボタンを取得
-                const button = event.relatedTarget;
-                // ボタンのdata属性から、編集対象の取引のインデックスを取得
-                const transactionIndex = button.getAttribute('data-transaction-index');
-                const transaction = transactions[transactionIndex];
-
-                if (!transaction) return;
-
-                const modalForm = editTransactionModal.querySelector('form');
-
-                // フォームの各要素に取引データを設定
-                modalForm.querySelector('#editTransactionId').value = transaction.transactionId;
-                modalForm.querySelector('#editTransactionDate').value = transaction.transactionDate;
-                modalForm.querySelector('#editAmount').value = transaction.plannedAmount;
-                modalForm.querySelector('#editMemo').value = transaction.memo || ''; // メモがnullの場合も考慮
-
-                // 取引種別のドロップダウンを選択状態にする
-                const typeSelect = modalForm.querySelector('#editTransactionType');
-                const typeToSelect = transactionTypes.find(t => t.name === transaction.budgetTransactionTypeName);
-                if (typeToSelect) {
-                    typeSelect.value = typeToSelect.id;
-                }
-
-                // カテゴリのドロップダウンを選択状態にする
-                const categorySelect = modalForm.querySelector('#editCategory');
-                const categoryToSelect = categories.find(c => c.categoryName === transaction.categoryName);
-                if (categoryToSelect) {
-                    categorySelect.value = categoryToSelect.id;
-                } else {
-                    categorySelect.value = ""; // "未分類"の場合
-                }
-            });
-        }
-
-        // F-B03: Complete toggle logic
-        document.querySelectorAll('.complete-toggle').forEach(toggle => {
-            toggle.addEventListener('change', function() {
-                const transactionId = this.getAttribute('data-transaction-id');
-                const isChecked = this.checked;
-
-                if (!isChecked) {
-                    // 現状、完了の取り消しは実装しない
-                    this.checked = true;
-                    return;
-                }
-
-                const row = this.closest('tr');
-                const actualAmountInput = row.querySelector('.actual-amount-input');
-                const actualAmount = actualAmountInput.value.trim() === '' ? null : actualAmountInput.value;
-
-                // CSRFトークンを取得
-                const csrfToken = document.querySelector("meta[name='_csrf']").getAttribute("content");
-                const csrfHeader = document.querySelector("meta[name='_csrf_header']").getAttribute("content");
-
-                const formData = new URLSearchParams();
-                formData.append('transactionId', transactionId);
-                if (actualAmount !== null) {
-                    formData.append('actualAmount', actualAmount);
-                }
-
-                // ローディング表示としてトグルを無効化
-                this.disabled = true;
-                actualAmountInput.disabled = true;
-
-                fetch('/budget/transactions/complete', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        [csrfHeader]: csrfToken
-                    },
-                    body: formData
-                })
-                .then(response => response.json())
-                .then(data => {
-                    handleCompleteResponse(data, this, actualAmountInput, transactionId);
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('通信エラーが発生しました。');
-                    this.checked = false;
-                    this.disabled = false;
-                    actualAmountInput.disabled = false;
-                });
-            });
-        });
-
-        function handleCompleteResponse(data, toggleElement, amountInputElement, transactionId) {
-            if (data.success) {
-                // F-B09: 差額貯金のモーダル表示判定
-                if (data.savingsDifference && data.savingsDifference > 0) {
-                    const savingsModal = new bootstrap.Modal(document.getElementById('savingsModal'));
-                    document.getElementById('savingsTransactionId').value = transactionId;
-                    // 差額をモーダルに表示
-                    const savingsModalLabel = document.getElementById('savingsModalLabel');
-                    savingsModalLabel.textContent = `差額 ${data.savingsDifference.toLocaleString()} 円を貯金へ`;
-                    // 差額をデータ属性として保持
-                    savingsModalLabel.dataset.difference = data.savingsDifference;
-                    savingsModal.show();
-                } else {
-                    // 差額貯金がない場合は通常通りリロード
-                    window.location.reload();
-                }
-            } else {
-                alert('エラー: ' + (data.message || '不明なエラーが発生しました。'));
-                toggleElement.checked = false;
-                toggleElement.disabled = false;
-                amountInputElement.disabled = false;
-            }
-        }
-
-        // F-B09: 差額貯金モーダルの確認ボタンのロジック
-        document.getElementById('confirmSavingsBtn').addEventListener('click', function() {
-            const transactionId = document.getElementById('savingsTransactionId').value;
-            const savingsAccountId = document.getElementById('savingsAccountId').value;
-            const differenceAmount = document.getElementById('savingsModalLabel').dataset.difference;
-
-            if (!savingsAccountId) {
-                alert('貯金先の口座を選択してください。');
-                return;
-            }
-
-            const csrfToken = document.querySelector("meta[name='_csrf']").getAttribute("content");
-            const csrfHeader = document.querySelector("meta[name='_csrf_header']").getAttribute("content");
-
-            const formData = new URLSearchParams();
-            formData.append('transactionId', transactionId);
-            formData.append('savingsAccountId', savingsAccountId);
-            formData.append('differenceAmount', differenceAmount);
-
-            fetch('/budget/transactions/create-savings-transfer', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    [csrfHeader]: csrfToken
-                },
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                // 成功・失敗にかかわらずページをリロードして最新の状態を反映
-                window.location.reload();
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('通信エラーが発生しました。');
-            });
-        });
-
-        // F-B02: Simulation Logic
-        const startSimBtn = document.getElementById('startSimBtn');
-        const saveSimBtn = document.getElementById('saveSimBtn');
-        const cancelSimBtn = document.getElementById('cancelSimBtn');
-        const transactionsBody = document.getElementById('transactions-body');
-        const table = document.getElementById('planned-transactions-table');
-        let sortable = null;
-        let transactionsForSim = []; // シミュレーション用のデータ配列
-
-        if (transactionsBody) {
-            sortable = new Sortable(transactionsBody, {
-                handle: '.handle', // ドラッグハンドルのクラス名
-                animation: 150,
-                disabled: true, // 初期状態では無効
-                onEnd: function (evt) {
-                    // データ配列をDOMの新しい順序に合わせる
-                    const movedItem = transactionsForSim.splice(evt.oldIndex, 1)[0];
-                    transactionsForSim.splice(evt.newIndex, 0, movedItem);
-
-                    // 移動したアイテムの日付を、移動先の前のアイテムの日付に合わせる
-                    // これにより、ユーザーは同じ日に支払いをまとめるシミュレーションができる
-                    
-                    const newDate = (evt.newIndex > 0)
-                        ? transactionsForSim[evt.newIndex - 1].transactionDate
-                        : (transactionsForSim.length > 1 ? transactionsForSim[1].transactionDate : transactionsForSim[0].transactionDate);
-
-                    transactionsForSim[evt.newIndex].transactionDate = newDate;
-                    
-                    // 更新されたデータ配列で残高と日付表示を再計算
-                    calculateBalances(transactionsForSim);
-                }
-            });
-        }
-
-        startSimBtn.addEventListener('click', () => {
-            // シミュレーション開始時に元のデータをディープコピー
-            transactionsForSim = JSON.parse(JSON.stringify(initialTransactions));
-
-            sortable.option('disabled', false); // ドラッグ＆ドロップを有効化
-            startSimBtn.classList.add('d-none');
-            saveSimBtn.classList.remove('d-none');
-            cancelSimBtn.classList.remove('d-none');
-            table.classList.add('table-info'); // シミュレーション中であることを視覚的に示す
-            document.querySelectorAll('.handle, .handle-col').forEach(el => el.style.display = 'table-cell');
-        });
-
-        cancelSimBtn.addEventListener('click', () => {
-            window.location.reload(); // 最も簡単なキャンセル方法はリロード
-        });
-
-        saveSimBtn.addEventListener('click', () => {
-            const updates = transactionsForSim.map(t => ({
-                transactionId: t.transactionId,
-                newDate: t.transactionDate
-            }));
-
-            const csrfToken = document.querySelector("meta[name='_csrf']").getAttribute("content");
-            const csrfHeader = document.querySelector("meta[name='_csrf_header']").getAttribute("content");
-
-            fetch('/budget/transactions/update-dates', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    [csrfHeader]: csrfToken
-                },
-                body: JSON.stringify(updates)
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    window.location.reload();
-                } else {
-                    alert('保存に失敗しました: ' + (data.message || '不明なエラーが発生しました。'));
-                }
-            }).catch(error => console.error('Error saving transaction dates:', error));
-        });
-
-        // Delete transaction logic
-        const deleteConfirmModal = document.getElementById('deleteConfirmModal');
-        if (deleteConfirmModal) {
-            const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
-            let transactionIdToDelete = null;
-
-            // モーダルが表示される直前に、削除対象のIDを保持
-            deleteConfirmModal.addEventListener('show.bs.modal', event => {
-                const button = event.relatedTarget;
-                transactionIdToDelete = button.getAttribute('data-transaction-id');
-            });
-
-            // 削除実行ボタンのクリックイベント
-            confirmDeleteBtn.addEventListener('click', () => {
-                if (!transactionIdToDelete) return;
-
-                const csrfToken = document.querySelector("meta[name='_csrf']").getAttribute("content");
-                const csrfHeader = document.querySelector("meta[name='_csrf_header']").getAttribute("content");
-
-                // RESTfulな慣例に従い、DELETEメソッドを使用し、URLにIDを含める
-                fetch('/budget/transactions/' + transactionIdToDelete, {
-                    method: 'DELETE',
-                    headers: {
-                        [csrfHeader]: csrfToken
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        // 成功したらモーダルを閉じてからページをリロード
-                        const modalInstance = bootstrap.Modal.getInstance(deleteConfirmModal);
-                        if (modalInstance) {
-                            // モーダルが完全に閉じられた後にリロードする
-                            deleteConfirmModal.addEventListener('hidden.bs.modal', () => {
-                                window.location.reload();
-                            }, { once: true });
-                            modalInstance.hide();
-                        } else {
-                            // フォールバックとして、インスタンスが取得できなくてもリロード
-                            window.location.reload();
-                        }
-                    } else {
-                        alert('エラー: ' + (data.message || '削除に失敗しました。'));
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('通信エラーが発生しました。');
-                });
             });
         }
     });

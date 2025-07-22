@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<script th:fragment="dashboardTransactionScript(transactions, mainAccountBalance, transactionTypes, categories, savingsAccounts)" th:inline="javascript">
+    // This script is designed to be reusable for any page with a planned transaction list
+    // that mimics the dashboard's functionality.
+    document.addEventListener('DOMContentLoaded', function () {
+        // --- Data Initialization ---
+        const initialTransactions = /*[[${transactions}]]*/ [];
+        const transactionTypesForJs = /*[[${transactionTypes}]]*/ [];
+        const categoriesForJs = /*[[${categories}]]*/ [];
+        const initialBalance = /*[[${mainAccountBalance}]]*/ 0;
+        let transactionsForSim = []; // Array for simulation
+        let sortable = null;
+
+        // --- DOM Elements ---
+        const transactionsBody = document.getElementById('main-account-transactions-body') || document.getElementById('transactions-body');
+        const table = document.getElementById('main-account-transactions-table') || document.getElementById('planned-transactions-table');
+        const startSimBtn = document.getElementById('startSimBtn');
+        const saveSimBtn = document.getElementById('saveSimBtn');
+        const cancelSimBtn = document.getElementById('cancelSimBtn');
+        const editTransactionModal = document.getElementById('editTransactionModal');
+        const deleteConfirmModal = document.getElementById('deleteConfirmModal');
+        const savingsModalEl = document.getElementById('savingsModal');
+
+        // --- Core Logic ---
+
+        // F-B02, F-B03: Frontend balance calculation logic
+        const calculateBalances = (transactionsToCalculate) => {
+            if (!transactionsToCalculate || transactionsToCalculate.length === 0 || !transactionsBody) {
+                return;
+            }
+
+            let currentBalance = initialBalance;
+            const rows = transactionsBody.querySelectorAll('tr[data-transaction-id]');
+
+            if (rows.length !== transactionsToCalculate.length) {
+                console.error("DOM-JS Mismatch: The number of rows in the DOM does not match the number of transactions in the JavaScript array.");
+                return;
+            }
+
+            rows.forEach((row, index) => {
+                const transaction = transactionsToCalculate[index];
+                const amount = transaction.plannedAmount;
+                const type = transaction.budgetTransactionTypeName;
+
+                currentBalance = (type === '入金') ? currentBalance + amount : currentBalance - amount;
+
+                const balanceCell = row.querySelector('.transaction-balance');
+                if (balanceCell) {
+                    balanceCell.textContent = `¥ ${Math.round(currentBalance).toLocaleString()}`;
+                    balanceCell.classList.toggle('text-danger', currentBalance < 0);
+                }
+                const dateCell = row.querySelector('.transaction-date');
+                if (dateCell) {
+                    dateCell.textContent = transaction.transactionDate;
+                }
+            });
+        };
+
+        // --- Event Listener Setup ---
+
+        // Edit transaction modal logic
+        if (editTransactionModal) {
+            editTransactionModal.addEventListener('show.bs.modal', event => {
+                const button = event.relatedTarget;
+
+                const modalForm = editTransactionModal.querySelector('form');
+                // Get data from data-* attributes
+                modalForm.querySelector('#editTransactionId').value = button.dataset.transactionId;
+                modalForm.querySelector('#editTransactionDate').value = button.dataset.date;
+                modalForm.querySelector('#editAmount').value = button.dataset.plannedAmount;
+                modalForm.querySelector('#editMemo').value = button.dataset.memo || '';
+
+                const typeSelect = modalForm.querySelector('#editTransactionType');
+                typeSelect.value = button.dataset.typeId;
+
+                const categorySelect = modalForm.querySelector('#editCategory');
+                categorySelect.value = button.dataset.categoryId || "";
+            });
+        }
+
+        // Complete toggle logic
+        if (transactionsBody) {
+            transactionsBody.querySelectorAll('.complete-toggle').forEach(toggle => {
+                toggle.addEventListener('change', function() {
+                    const transactionId = this.closest('tr').dataset.transactionId;
+                    if (!this.checked) {
+                        this.checked = true;
+                        return;
+                    }
+
+                    const row = this.closest('tr');
+                    const actualAmountInput = row.querySelector('.actual-amount-input');
+                    const actualAmount = actualAmountInput.value.trim() === '' ? null : actualAmountInput.value;
+
+                    const csrfToken = document.querySelector("meta[name='_csrf']").getAttribute("content");
+                    const csrfHeader = document.querySelector("meta[name='_csrf_header']").getAttribute("content");
+
+                    const formData = new URLSearchParams();
+                    formData.append('transactionId', transactionId);
+                    if (actualAmount !== null) formData.append('actualAmount', actualAmount);
+
+                    this.disabled = true;
+                    actualAmountInput.disabled = true;
+
+                    fetch('/budget/transactions/complete', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded', [csrfHeader]: csrfToken },
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // If a borrow was updated, update the summary UI on the borrow detail page
+                            if (data.updatedBorrow) {
+                                const borrow = data.updatedBorrow;
+                                const repaidAmountEl = document.getElementById('repaidAmount');
+                                const progressBarEl = document.getElementById('repaymentProgressBar');
+
+                                if (repaidAmountEl && progressBarEl) {
+                                    repaidAmountEl.textContent = `¥${borrow.borrow.repaidAmount.toLocaleString()}`;
+                                    progressBarEl.style.width = `${borrow.repaymentRatePercent}%`;
+                                    progressBarEl.textContent = `${borrow.repaymentRatePercent}%`;
+                                    progressBarEl.setAttribute('aria-valuenow', borrow.repaymentRatePercent);
+                                }
+                            }
+                            // If a goal was updated, update the summary UI on the goal detail page
+                            if (data.updatedGoal) {
+                                const goal = data.updatedGoal;
+                                const savedAmountEl = document.getElementById('savedAmount');
+                                const progressBarEl = document.getElementById('progressProgressBar');
+
+                                if (savedAmountEl && progressBarEl) {
+                                    savedAmountEl.textContent = `¥${goal.goal.savedAmount.toLocaleString()}`;
+                                    progressBarEl.style.width = `${goal.progressRatePercent}%`;
+                                    progressBarEl.textContent = `${goal.progressRatePercent}%`;
+                                    progressBarEl.setAttribute('aria-valuenow', goal.progressRatePercent);
+                                }
+                            }
+
+                            if (data.savingsDifference && data.savingsDifference > 0) {
+                                const savingsModal = new bootstrap.Modal(savingsModalEl);
+                                savingsModalEl.querySelector('#savingsTransactionId').value = transactionId;
+                                const savingsModalLabel = savingsModalEl.querySelector('#savingsModalLabel');
+                                savingsModalLabel.textContent = `差額 ${data.savingsDifference.toLocaleString()} 円を貯金へ`;
+                                savingsModalLabel.dataset.difference = data.savingsDifference;
+                                savingsModal.show();
+                            } else {
+                                window.location.reload();
+                            }
+                        } else {
+                            alert('エラー: ' + (data.message || '不明なエラー'));
+                            this.checked = false;
+                            this.disabled = false;
+                            actualAmountInput.disabled = false;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('通信エラーが発生しました。');
+                        this.checked = false;
+                        this.disabled = false;
+                        actualAmountInput.disabled = false;
+                    });
+                });
+            });
+        }
+
+        // Savings modal logic
+        if (savingsModalEl) {
+            savingsModalEl.querySelector('#confirmSavingsBtn').addEventListener('click', function() {
+                const transactionId = savingsModalEl.querySelector('#savingsTransactionId').value;
+                const savingsAccountId = savingsModalEl.querySelector('#savingsAccountId').value;
+                const differenceAmount = savingsModalEl.querySelector('#savingsModalLabel').dataset.difference;
+
+                if (!savingsAccountId) {
+                    alert('貯金先の口座を選択してください。');
+                    return;
+                }
+
+                const csrfToken = document.querySelector("meta[name='_csrf']").getAttribute("content");
+                const csrfHeader = document.querySelector("meta[name='_csrf_header']").getAttribute("content");
+
+                const formData = new URLSearchParams();
+                formData.append('transactionId', transactionId);
+                formData.append('savingsAccountId', savingsAccountId);
+                formData.append('differenceAmount', differenceAmount);
+
+                fetch('/budget/transactions/create-savings-transfer', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded', [csrfHeader]: csrfToken },
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => { window.location.reload(); })
+                .catch(error => { console.error('Error:', error); alert('通信エラーが発生しました。'); });
+            });
+        }
+
+        // Simulation logic
+        if (startSimBtn) {
+            sortable = new Sortable(transactionsBody, {
+                handle: '.handle',
+                animation: 150,
+                disabled: true,
+                onEnd: function (evt) {
+                    const movedItem = transactionsForSim.splice(evt.oldIndex, 1)[0];
+                    transactionsForSim.splice(evt.newIndex, 0, movedItem);
+
+                    const newDate = (evt.newIndex > 0)
+                        ? transactionsForSim[evt.newIndex - 1].transactionDate
+                        : (transactionsForSim.length > 1 ? transactionsForSim[1].transactionDate : transactionsForSim[0].transactionDate);
+
+                    transactionsForSim[evt.newIndex].transactionDate = newDate;
+                    calculateBalances(transactionsForSim);
+                }
+            });
+
+            startSimBtn.addEventListener('click', () => {
+                transactionsForSim = JSON.parse(JSON.stringify(initialTransactions));
+                sortable.option('disabled', false);
+                startSimBtn.classList.add('d-none');
+                saveSimBtn.classList.remove('d-none');
+                cancelSimBtn.classList.remove('d-none');
+                table.classList.add('table-info');
+                document.querySelectorAll('.handle, .handle-col').forEach(el => el.style.display = 'table-cell');
+            });
+
+            cancelSimBtn.addEventListener('click', () => { window.location.reload(); });
+
+            saveSimBtn.addEventListener('click', () => {
+                const updates = transactionsForSim.map(t => ({ transactionId: t.transactionId, newDate: t.transactionDate }));
+                const csrfToken = document.querySelector("meta[name='_csrf']").getAttribute("content");
+                const csrfHeader = document.querySelector("meta[name='_csrf_header']").getAttribute("content");
+
+                fetch('/budget/transactions/update-dates', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', [csrfHeader]: csrfToken },
+                    body: JSON.stringify(updates)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) { window.location.reload(); }
+                    else { alert('保存に失敗しました: ' + (data.message || '不明なエラー')); }
+                }).catch(error => console.error('Error saving transaction dates:', error));
+            });
+        }
+
+        // Delete transaction logic
+        if (deleteConfirmModal) {
+            let transactionIdToDelete = null;
+            deleteConfirmModal.addEventListener('show.bs.modal', event => {
+                transactionIdToDelete = event.relatedTarget.getAttribute('data-transaction-id');
+            });
+
+            deleteConfirmModal.querySelector('#confirmDeleteBtn').addEventListener('click', () => {
+                if (!transactionIdToDelete) return;
+                const csrfToken = document.querySelector("meta[name='_csrf']").getAttribute("content");
+                const csrfHeader = document.querySelector("meta[name='_csrf_header']").getAttribute("content");
+
+                fetch('/budget/transactions/' + transactionIdToDelete, {
+                    method: 'DELETE',
+                    headers: { [csrfHeader]: csrfToken }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const modalInstance = bootstrap.Modal.getInstance(deleteConfirmModal);
+                        if (modalInstance) {
+                            deleteConfirmModal.addEventListener('hidden.bs.modal', () => { window.location.reload(); }, { once: true });
+                            modalInstance.hide();
+                        } else {
+                            window.location.reload();
+                        }
+                    } else {
+                        alert('エラー: ' + (data.message || '削除に失敗しました。'));
+                    }
+                })
+                .catch(error => { console.error('Error:', error); alert('通信エラーが発生しました。'); });
+            });
+        }
+
+        // --- Initial Execution ---
+        calculateBalances(initialTransactions);
+    });
+</script>
+
+</body>
+</html>

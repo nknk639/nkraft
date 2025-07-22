@@ -34,6 +34,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(DashboardController.class)
+@MockBean(AccountService.class)
+@MockBean(BudgetTransactionTypeService.class)
+@MockBean(CategoryService.class)
+@MockBean(TransactionService.class)
+@MockBean(RecurringTransactionService.class)
+@MockBean(UserDetailsServiceImpl.class) // Spring Securityの依存関係で必要
 class DashboardControllerTest {
 
     @Autowired
@@ -42,18 +48,16 @@ class DashboardControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @MockBean
+    @Autowired
     private AccountService accountService;
-    @MockBean
+    @Autowired
     private BudgetTransactionTypeService budgetTransactionTypeService;
-    @MockBean
+    @Autowired
     private CategoryService categoryService;
-    @MockBean
+    @Autowired
     private TransactionService transactionService;
-    @MockBean
+    @Autowired
     private RecurringTransactionService recurringTransactionService;
-    @MockBean
-    private UserDetailsServiceImpl userDetailsService; // Spring Securityの依存関係で必要
 
     private NkraftUser testUser;
     private LoginUserDetails testUserDetails;
@@ -132,7 +136,7 @@ class DashboardControllerTest {
                 .andExpect(redirectedUrl("/budget/"))
                 .andExpect(flash().attribute("message", "取引を登録しました。"));
 
-        verify(transactionService, times(1)).createTransaction(any(), any(), any(), any(), any(), any(), any(), any());
+        verify(transactionService, times(1)).createTransaction(any(NkraftUser.class), any(Account.class), any(BudgetTransactionType.class), any(Category.class), any(LocalDate.class), any(BigDecimal.class), anyString(), isNull(), isNull(), isNull());
     }
 
     @Test

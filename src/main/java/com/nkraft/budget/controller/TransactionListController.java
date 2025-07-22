@@ -50,9 +50,9 @@ public class TransactionListController {
         Page<Transaction> transactionPage = transactionService.searchTransactions(form, currentUser, pageable);
         model.addAttribute("page", transactionPage);
 
-        model.addAttribute("accounts", accountService.getAccountsByUserId(currentUser.getId()));
-        model.addAttribute("categories", categoryService.getCategoriesByUserId(currentUser.getId()));
-        model.addAttribute("transactionTypes", budgetTransactionTypeService.getAllTransactionTypes());
+        model.addAttribute("accounts", accountService.getAccountsByUserIdAsDTO(currentUser.getId()));
+        model.addAttribute("categories", categoryService.getCategoriesByUserIdAsDTO(currentUser.getId()));
+        model.addAttribute("transactionTypes", budgetTransactionTypeService.getAllTransactionTypesAsDTO());
 
         return "budget/transactions";
     }

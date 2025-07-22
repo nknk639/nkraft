@@ -38,4 +38,7 @@ public class Category {
 
     @Column(name = "category_name", nullable = false)
     private String categoryName;
+
+    @Column(name = "is_deleted")
+    private Boolean isDeleted = false;
 }

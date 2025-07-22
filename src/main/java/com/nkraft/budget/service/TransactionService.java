@@ -2,6 +2,7 @@ package com.nkraft.budget.service;
 
 import com.nkraft.budget.dto.TransactionDTO;
 import com.nkraft.budget.dto.TransactionSearchForm;
+import com.nkraft.budget.repository.BorrowRepository;
 import com.nkraft.budget.entity.*;
 import com.nkraft.budget.dto.TransactionDateUpdateDTO;
 import java.math.BigDecimal;
@@ -19,7 +20,6 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.nkraft.budget.dto.TransactionDTO;
 import com.nkraft.user.entity.NkraftUser;
 import com.nkraft.budget.repository.TransactionRepository;
 
@@ -31,6 +31,8 @@ import lombok.RequiredArgsConstructor;
 public class TransactionService {
 
     private final TransactionRepository transactionRepository;
+    private final BudgetTransactionTypeService budgetTransactionTypeService;
+    private final BorrowRepository borrowRepository;
 
     private static final Logger logger = LoggerFactory.getLogger(TransactionService.class);
 
@@ -140,6 +142,25 @@ public class TransactionService {
         } else { // 出金 or 振替
             account.setBalance(account.getBalance().subtract(finalActualAmount));
         }
+
+        // F-B06: 借入返済の場合、借入の返済済み額を更新する
+        if (transaction.getBorrow() != null) {
+            Borrow borrow = transaction.getBorrow();
+            // 念のため所有者チェック
+            if (!borrow.getNkraftUser().getId().equals(user.getId())) {
+                throw new SecurityException("User does not have permission to update the related borrow record.");
+            }
+            borrow.setRepaidAmount(borrow.getRepaidAmount().add(finalActualAmount));
+        }
+        // F-B07: 目標貯金の場合、目標の貯金済み額を更新する
+        if (transaction.getGoal() != null) {
+            Goal goal = transaction.getGoal();
+            // 念のため所有者チェック
+            if (!goal.getNkraftUser().getId().equals(user.getId())) {
+                throw new SecurityException("User does not have permission to update the related goal record.");
+            }
+            goal.setSavedAmount(goal.getSavedAmount().add(finalActualAmount));
+        }
         // The transaction object now has the updated status and actualAmount
         return transaction;
     }
@@ -161,13 +182,14 @@ public class TransactionService {
 
         Account sourceAccount = sourceTransaction.getAccount();
         String memo = "差額貯金（" + sourceTransaction.getMemo() + "）";
+        Category category = sourceTransaction.getCategory();
 
-        // 貯金口座の残高を更新
-        savingsAccount.setBalance(savingsAccount.getBalance().add(differenceAmount));
+        // 1. 元口座からの「振替」取引を作成し、残高を更新
+        // createAndCompleteTransactionは内部で残高を更新し、取引を保存する
+        createAndCompleteTransaction(user, sourceAccount, transferType.getName(), category, LocalDate.now(), differenceAmount, memo, null, null);
 
-        // 生成する取引は即座に「完了」ステータスにする
-        createCompletedTransaction(user, sourceAccount, transferType, sourceTransaction.getCategory(), LocalDate.now(), differenceAmount, memo, null);
-        createCompletedTransaction(user, savingsAccount, depositType, sourceTransaction.getCategory(), LocalDate.now(), differenceAmount, memo, null);
+        // 2. 貯金口座への「入金」取引を作成し、残高を更新
+        createAndCompleteTransaction(user, savingsAccount, depositType.getName(), category, LocalDate.now(), differenceAmount, memo, null, null);
     }
 
     /**
@@ -209,7 +231,9 @@ public class TransactionService {
     }
 
     @Transactional
-    public Transaction createTransaction(NkraftUser user, Account account, BudgetTransactionType budgetTransactionType, Category category, LocalDate transactionDate, BigDecimal plannedAmount, String memo, RecurringTransaction recurringTransaction) {
+    public Transaction createTransaction(NkraftUser user, Account account, BudgetTransactionType budgetTransactionType,
+                                         Category category, LocalDate transactionDate, BigDecimal plannedAmount, String memo,
+                                         RecurringTransaction recurringTransaction, Borrow borrow, Goal goal) {
         Transaction transaction = new Transaction();
         transaction.setUser(user); // ユーザー
         transaction.setAccount(account); // 口座
@@ -220,6 +244,8 @@ public class TransactionService {
         transaction.setTransactionStatus(TransactionStatus.PLANNED); // 取引ステータス（予定）
         transaction.setMemo(memo); // メモ
         transaction.setRecurringTransaction(recurringTransaction);
+        transaction.setBorrow(borrow);
+        transaction.setGoal(goal);
 
         transactionRepository.save(transaction);
         return transaction;
@@ -239,17 +265,65 @@ public class TransactionService {
      * @return 取引予定のDTOリスト
      */
   public List<TransactionDTO> getPlannedTransactionsForAccountAsDTO(NkraftUser user, Account account) {
-    return getPlannedTransactionsForAccount(user, account).stream()
-        .map(transaction -> new TransactionDTO(
-            transaction.getId(),
-            transaction.getTransactionDate(),
-            transaction.getPlannedAmount(),
-            transaction.getMemo(),
-            transaction.getBudgetTransactionType().getName(),
-            transaction.getCategory() != null ? transaction.getCategory().getCategoryName() : null
-        ))
-        .collect(java.util.stream.Collectors.toList());
+        return getPlannedTransactionsForAccount(user, account).stream()
+                .map(this::mapTransactionToDto)
+                .collect(java.util.stream.Collectors.toList());
   }
+
+    /**
+     * TransactionエンティティをTransactionDTOに変換します。
+     * @param transaction 変換元のTransactionエンティティ
+     * @return 変換後のTransactionDTO
+     */
+    public TransactionDTO mapTransactionToDto(Transaction transaction) {
+        TransactionDTO dto = new TransactionDTO(
+                transaction.getId(),
+                transaction.getTransactionDate(),
+                transaction.getPlannedAmount(),
+                transaction.getMemo(),
+                transaction.getBudgetTransactionType().getName(),
+                transaction.getCategory() != null ? transaction.getCategory().getCategoryName() : null
+        );
+        dto.setBudgetTransactionTypeId(transaction.getBudgetTransactionType().getId());
+        if (transaction.getCategory() != null) {
+            dto.setCategoryId(transaction.getCategory().getId());
+        }
+        if (transaction.getBorrow() != null) {
+            dto.setBorrowId(transaction.getBorrow().getBorrowId());
+            dto.setBorrowName(transaction.getBorrow().getBorrowName());
+        }
+        if (transaction.getGoal() != null) {
+            dto.setGoalId(transaction.getGoal().getGoalId());
+            dto.setGoalName(transaction.getGoal().getGoalName());
+        }
+        return dto;
+    }
+
+    /**
+     * 指定された借入に紐づく「予定」ステータスの取引をDTOのリストとして取得します。
+     * @param borrow 借入エンティティ
+     * @return 取引予定のDTOリスト
+     */
+    @Transactional(readOnly = true)
+    public List<TransactionDTO> getPlannedTransactionsForBorrow(Borrow borrow) {
+        return transactionRepository.findByBorrowAndTransactionStatusAndIsDeletedFalseOrderByTransactionDateAsc(borrow, TransactionStatus.PLANNED)
+                .stream()
+                .map(this::mapTransactionToDto)
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    /**
+     * 指定された目標に紐づく「予定」ステータスの取引をDTOのリストとして取得します。
+     * @param goal 目標エンティティ
+     * @return 取引予定のDTOリスト
+     */
+    @Transactional(readOnly = true)
+    public List<TransactionDTO> getPlannedTransactionsForGoal(Goal goal) {
+        return transactionRepository.findByGoalAndTransactionStatusAndIsDeletedFalseOrderByTransactionDateAsc(goal, TransactionStatus.PLANNED)
+                .stream()
+                .map(this::mapTransactionToDto)
+                .collect(java.util.stream.Collectors.toList());
+    }
 
     /**
      * 複数の取引の日付を一括で更新します。
@@ -293,5 +367,41 @@ public class TransactionService {
         transaction.setRecurringTransaction(recurringTransaction);
 
         return transactionRepository.save(transaction);
+    }
+
+    /**
+     * 借入や目標達成など、即時完了とする取引を作成します。
+     * 口座残高も更新します。
+     *
+     * @param user ユーザー
+     * @param account 対象口座
+     * @param transactionTypeName 取引種別名（"入金", "出金"など）
+     * @param transactionDate 取引日
+     * @param amount 金額
+     * @param memo メモ
+     * @param borrow 関連する借入 (任意)
+     * @param goal 関連する目標 (任意)
+     * @return 作成された取引
+     */
+    @Transactional
+    public Transaction createAndCompleteTransaction(NkraftUser user, Account account, String transactionTypeName, Category category, LocalDate transactionDate, BigDecimal amount, String memo, Borrow borrow, Goal goal) {
+        BudgetTransactionType transactionType = budgetTransactionTypeService.getTransactionTypeByName(transactionTypeName);
+
+        Transaction transaction = createCompletedTransaction(user, account, transactionType, category, transactionDate, amount, memo, null);
+        transaction.setBorrow(borrow);
+        transaction.setGoal(goal);
+
+        // 口座残高を更新
+        if ("入金".equals(transactionTypeName)) {
+            account.setBalance(account.getBalance().add(amount));
+        } else { // 出金 or 振替
+            account.setBalance(account.getBalance().subtract(amount));
+        }
+
+        return transactionRepository.save(transaction);
+    }
+
+    public BudgetTransactionType getExpenditureTransactionType() {
+        return budgetTransactionTypeService.getTransactionTypeByName("出金");
     }
 }

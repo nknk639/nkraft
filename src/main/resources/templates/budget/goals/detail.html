@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/app :: layout(
+        title=${pageTitle},
+        breadcrumbs=~{::breadcrumbs},
+        content=~{::content},
+        modals=~{::modals},
+        scripts=~{::scripts}
+      )}">
+
+<!-- Breadcrumbs Fragment -->
+<nav th:fragment="breadcrumbs" aria-label="breadcrumb">
+    <ol class="breadcrumb mb-0">
+        <li class="breadcrumb-item"><a th:href="@{/budget/}">予算管理</a></li>
+        <li class="breadcrumb-item"><a th:href="@{/budget/borrows}">借入・目標管理</a></li>
+        <li class="breadcrumb-item active" aria-current="page" th:text="${pageTitle}"></li>
+    </ol>
+</nav>
+
+<!-- Content Fragment -->
+<div th:fragment="content" th:with="goalDto=${goalDetail.goal}, goal=${goalDetail.goal.goal}">
+    <!-- 1. Goal Summary -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-3">
+                    <h5 class="card-title mb-1" th:text="${goal.goalName}"></h5>
+                    <p class="card-text text-muted">目標サマリー</p>
+                </div>
+                <div class="col-md-6">
+                    <div class="progress" style="height: 25px;">
+                        <div class="progress-bar bg-success" role="progressbar" id="progressProgressBar"
+                             th:style="'width: ' + ${goalDto.progressRatePercent} + '%;'"
+                             th:attr="aria-valuenow=${goalDto.progressRatePercent}"
+                             aria-valuemin="0" aria-valuemax="100"
+                             th:text="${goalDto.progressRatePercent} + '%'">
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 text-md-end mt-3 mt-md-0">
+                    <span id="savedAmount" th:text="'¥' + ${#numbers.formatDecimal(goal.savedAmount, 0, 'COMMA', 0, 'POINT')}"></span> /
+                    <span th:text="'¥' + ${#numbers.formatDecimal(goal.targetAmount, 0, 'COMMA', 0, 'POINT')}"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Saving List -->
+    <div class="card shadow-sm">
+        <div class="card-header fw-bold d-flex justify-content-between align-items-center">
+            <span>貯金予定リスト</span>
+            <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#newSavingModal">
+                <i class="fas fa-plus me-1"></i> 新規貯金を追加
+            </button>
+        </div>
+        <div class="card-body p-0">
+            <div style="max-height: 500px; overflow-y: auto;">
+                <table class="table table-hover mb-0" id="saving-transactions-table">
+                    <thead>
+                    <tr>
+                        <th style="width: 12%;">日付</th>
+                        <th style="width: 37%;">内容</th>
+                        <th class="text-end" style="width: 15%;">予定額</th>
+                        <th class="text-center" style="width: 15%;">実績額</th>
+                        <th class="text-center" style="width: 10%;">完了</th>
+                        <th class="text-center" style="width: 8%;">操作</th>
+                    </tr>
+                    </thead>
+                    <tbody id="saving-transactions-body">
+                    <tr th:each="tx : ${goalDetail.savingTransactions}"
+                        th:data-transaction-id="${tx.transactionId}"
+                        class="table-success">
+                        <td th:text="${#temporals.format(tx.transactionDate, 'yyyy-MM-dd')}" class="align-middle transaction-date"></td>
+                        <td class="align-middle">
+                            <span th:text="${tx.memo}" class="d-block"></span>
+                            <small class="text-muted" th:text="${tx.categoryName} ?: '未分類'"></small>
+                        </td>
+                        <td class="text-end align-middle">
+                            <span class="text-danger">-</span>
+                            <span class="text-danger" th:text="${#numbers.formatDecimal(tx.plannedAmount, 0, 'COMMA', 0, 'POINT')}"></span>
+                        </td>
+                        <td class="text-center align-middle">
+                            <input type="number" class="form-control form-control-sm text-end actual-amount-input" th:value="${tx.plannedAmount}" placeholder="実績額">
+                        </td>
+                        <td class="text-center align-middle">
+                            <div class="form-check form-switch d-flex justify-content-center">
+                                <input class="form-check-input saving-complete-toggle" type="checkbox" role="switch">
+                            </div>
+                        </td>
+                        <td class="text-center align-middle">
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button type="button" class="btn btn-outline-secondary edit-btn"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#editTransactionModal"
+                                        th:data-transaction-id="${tx.transactionId}"
+                                        th:data-date="${tx.transactionDate}"
+                                        th:data-planned-amount="${tx.plannedAmount}"
+                                        th:data-type-id="${tx.budgetTransactionTypeId}"
+                                        th:data-category-id="${tx.categoryId}"
+                                        th:data-memo="${tx.memo}"
+                                        title="編集">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button type="button" class="btn btn-outline-danger delete-btn"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#deleteConfirmModal"
+                                        th:data-transaction-id="${tx.transactionId}"
+                                        title="削除">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(goalDetail.savingTransactions)}"><td colspan="6" class="text-center text-muted p-4">貯金予定はありません。</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Main Account Transaction List -->
+    <div class="card shadow-sm mt-4" th:if="${goalDetail.mainAccountPlannedTransactions != null}">
+        <div class="card-header fw-bold d-flex justify-content-between align-items-center">
+            <span>メイン口座 取引予定リスト</span>
+        </div>
+        <div class="card-body p-0">
+            <div style="max-height: 400px; overflow-y: auto;">
+                <table class="table table-hover mb-0" id="main-account-transactions-table">
+                    <thead>
+                    <tr>
+                        <th style="width: 12%;">日付</th>
+                        <th style="width: 25%;">内容</th>
+                        <th class="text-end" style="width: 15%;">予定額</th>
+                        <th class="text-center" style="width: 15%;">実績額</th>
+                        <th class="text-center" style="width: 10%;">完了</th>
+                        <th class="text-center" style="width: 8%;">操作</th>
+                        <th class="text-end" style="width: 15%;">残高</th>
+                    </tr>
+                    </thead>
+                    <tbody id="main-account-transactions-body">
+                    <tr th:each="tx, iterStat : ${goalDetail.mainAccountPlannedTransactions}"
+                        th:data-transaction-id="${tx.transactionId}"
+                        th:classappend="${tx.goalId != null and tx.goalId == goal.goalId} ? 'table-success' : ''">
+                        <td th:text="${#temporals.format(tx.transactionDate, 'yyyy-MM-dd')}" class="align-middle transaction-date"></td>
+                        <td class="align-middle">
+                            <span th:text="${tx.memo}" class="d-block"></span>
+                            <small class="text-muted" th:text="${tx.categoryName} ?: '未分類'"></small>
+                        </td>
+                        <td class="text-end align-middle">
+                            <span th:text="${tx.budgetTransactionTypeName == '入金' ? '+' : '-'}" th:classappend="${tx.budgetTransactionTypeName == '入金' ? 'text-success' : 'text-danger'}"></span>
+                            <span th:text="${#numbers.formatDecimal(tx.plannedAmount, 0, 'COMMA', 0, 'POINT')}" th:classappend="${tx.budgetTransactionTypeName == '入金' ? 'text-success' : 'text-danger'}"></span>
+                        </td>
+                        <td class="text-center align-middle">
+                            <input type="number" class="form-control form-control-sm text-end actual-amount-input" th:value="${tx.plannedAmount}" placeholder="実績額">
+                        </td>
+                        <td class="text-center align-middle">
+                            <div class="form-check form-switch d-flex justify-content-center">
+                                <input class="form-check-input complete-toggle" type="checkbox" role="switch">
+                            </div>
+                        </td>
+                        <td class="text-center align-middle">
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button type="button" class="btn btn-outline-secondary edit-btn"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#editTransactionModal"
+                                        th:data-transaction-id="${tx.transactionId}"
+                                        th:data-date="${tx.transactionDate}"
+                                        th:data-planned-amount="${tx.plannedAmount}"
+                                        th:data-type-id="${tx.budgetTransactionTypeId}"
+                                        th:data-category-id="${tx.categoryId}"
+                                        th:data-memo="${tx.memo}"
+                                        title="編集"><i class="fas fa-edit"></i></button>
+                                <button type="button" class="btn btn-outline-danger delete-btn" data-bs-toggle="modal" data-bs-target="#deleteConfirmModal" th:data-transaction-id="${tx.transactionId}" title="削除"><i class="fas fa-trash-alt"></i></button>
+                            </div>
+                        </td>
+                        <td class="text-end align-middle fw-bold transaction-balance"></td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(goalDetail.mainAccountPlannedTransactions)}">
+                        <td colspan="7" class="text-center text-muted p-4">メイン口座の取引予定はありません。</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modals Fragment -->
+<div th:fragment="modals">
+    <div class="modal fade" id="newSavingModal" tabindex="-1" aria-labelledby="newSavingModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="newSavingModalLabel">新規貯金の登録</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form th:action="@{/budget/goals/{id}/savings(id=${goalDetail.goal.goal.goalId})}" method="post" th:object="${savingCreateDTO}">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="savingDate" class="form-label">貯金予定日</label>
+                            <input type="date" class="form-control" id="savingDate" th:field="*{savingDate}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="savingAmount" class="form-label">貯金予定額</label>
+                            <div class="input-group">
+                                <span class="input-group-text">¥</span>
+                                <input type="number" class="form-control" id="savingAmount" th:field="*{savingAmount}" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="sourceAccountId" class="form-label">貯金元口座</label>
+                            <select class="form-select" id="sourceAccountId" th:field="*{sourceAccountId}" required>
+                                <option value="">選択してください</option>
+                                <option th:each="acc : ${accounts}" th:value="${acc.accountId}" th:text="${acc.accountName}" th:selected="${acc.isMain}"></option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="savingMemo" class="form-label">メモ</label>
+                            <input type="text" class="form-control" id="savingMemo" th:field="*{memo}" th:placeholder="${goalDetail.goal.goal.goalName} + 'への貯金'">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                        <button type="submit" class="btn btn-success">登録</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit/Delete Modals (from dashboard) -->
+    <div th:replace="~{fragments/transaction_modals :: savingsModal}"></div>
+    <div th:replace="~{fragments/transaction_modals :: editTransactionModal(redirectUrl='/budget/goals/' + ${goalDetail.goal.goal.goalId})}"></div>
+    <div th:replace="~{fragments/transaction_modals :: deleteConfirmModal}"></div>
+</div>
+
+<!-- Scripts Fragment -->
+<th:block th:fragment="scripts">
+    <!-- Dashboard Transaction Script -->
+    <script th:replace="~{fragments/transaction_scripts :: dashboardTransactionScript(
+        transactions=${goalDetail.mainAccountPlannedTransactions},
+        mainAccountBalance=${goalDetail.mainAccountBalance},
+        transactionTypes=${transactionTypes},
+        categories=${categories},
+        savingsAccounts=${savingsAccounts}
+    )}"></script>
+
+    <script th:inline="javascript">
+        document.addEventListener('DOMContentLoaded', function () {
+            // =================================================
+            // Saving list specific complete toggle logic
+            // =================================================
+            document.querySelectorAll('.saving-complete-toggle').forEach(toggle => {
+                toggle.addEventListener('change', function() {
+                    const row = this.closest('tr');
+                    const transactionId = row.dataset.transactionId;
+                    const actualAmountInput = row.querySelector('.actual-amount-input');
+                    const actualAmount = actualAmountInput.value.trim() === '' ? null : actualAmountInput.value;
+
+                    const csrfToken = document.querySelector("meta[name='_csrf']").getAttribute("content");
+                    const csrfHeader = document.querySelector("meta[name='_csrf_header']").getAttribute("content");
+
+                    const formData = new URLSearchParams();
+                    formData.append('transactionId', transactionId);
+                    if (actualAmount !== null) formData.append('actualAmount', actualAmount);
+
+                    this.disabled = true;
+                    actualAmountInput.disabled = true;
+
+                    fetch('/budget/goals/savings/complete', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            [csrfHeader]: csrfToken
+                        },
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            row.classList.add('table-secondary', 'text-muted');
+                            if (data.updatedGoal) {
+                                const goal = data.updatedGoal;
+                                const savedAmountEl = document.getElementById('savedAmount');
+                                const progressBarEl = document.getElementById('progressProgressBar');
+
+                                savedAmountEl.textContent = `¥${goal.goal.savedAmount.toLocaleString()}`;
+                                progressBarEl.style.width = `${goal.progressRatePercent}%`;
+                                progressBarEl.textContent = `${goal.progressRatePercent}%`;
+                                progressBarEl.setAttribute('aria-valuenow', goal.progressRatePercent);
+                            }
+                            window.location.reload();
+                        } else {
+                            alert('エラー: ' + (data.message || '不明なエラー'));
+                            this.checked = false;
+                            this.disabled = false;
+                            actualAmountInput.disabled = false;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('通信エラーが発生しました。');
+                        this.checked = false;
+                        this.disabled = false;
+                        actualAmountInput.disabled = false;
+                    });
+                });
+            });
+
+        });
+    </script>
+</th:block>
+
+</html>

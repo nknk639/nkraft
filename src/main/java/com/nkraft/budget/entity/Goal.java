@@ -44,4 +44,7 @@ public class Goal {
 
     private BigDecimal targetAmount;
     private BigDecimal savedAmount;
+
+    @Column(name = "is_deleted")
+    private Boolean isDeleted = false;
 }

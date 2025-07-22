@@ -3,6 +3,9 @@ package com.nkraft.budget.dto;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
+import com.nkraft.budget.entity.Borrow;
+import com.nkraft.budget.entity.Goal;
+
 import lombok.Data;
 
 /**
@@ -20,6 +23,12 @@ public class TransactionDTO {
     private BigDecimal plannedAmount;
     private BigDecimal actualAmount;
     private String transactionStatus;
+    private Long categoryId;
+    private Long budgetTransactionTypeId;
+    private Long borrowId;
+    private String borrowName;
+    private Long goalId;
+    private String goalName;
     
     public TransactionDTO(Long transactionId, LocalDate transactionDate, BigDecimal plannedAmount, String memo, String budgetTransactionTypeName, String categoryName) {
         this.transactionId = transactionId;
